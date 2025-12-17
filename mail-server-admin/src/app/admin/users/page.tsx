@@ -458,14 +458,10 @@ export default function UsersManagement() {
                 ))}
                 <option value="">Other (specify below)</option>
               </select>
-              {(newUser.domain === '' || !domains.some(d => d.domain === newUser.domain)) && (
-                <input
-                  type="text"
-                  value={newUser.domain}
-                  onChange={(e) => setNewUser({...newUser, domain: e.target.value})}
-                  className="w-full mt-2 px-3 py-2 border border-foreground/20 rounded bg-background"
-                  placeholder="Enter custom domain"
-                />
+              {newUser.domain && !domains.some(d => d.domain === newUser.domain) && (
+                <div className="mt-2 text-sm text-foreground/80">
+                  Will create new domain: <strong>{newUser.domain}</strong>
+                </div>
               )}
             </div>
             

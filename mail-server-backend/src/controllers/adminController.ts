@@ -189,6 +189,9 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     // Automatically generate email if domain is provided and email is not
     if (domain && !email) {
       email = `${username}@${domain}`;
+    } else if (domain && email && !email.endsWith(`@${domain}`)) {
+      // If both email and domain are provided but email doesn't match domain, use the domain
+      email = `${username}@${domain}`;
     }
 
     // Validate that email is provided (either directly or generated)
@@ -215,6 +218,11 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     // Register the classification if provided
     if (accountClassification) {
       await registerClassification(accountClassification);
+    }
+
+    // Register the domain if provided
+    if (domain) {
+      await registerDomain(domain);
     }
 
     // Hash password
@@ -277,6 +285,9 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       // Automatically generate email if domain is provided and email is not
       if (user.domain && !user.email) {
         user.email = `${user.username}@${user.domain}`;
+      } else if (user.domain && user.email && !user.email.endsWith(`@${user.domain}`)) {
+        // If both email and domain are provided but email doesn't match domain, use the domain
+        user.email = `${user.username}@${user.domain}`;
       }
 
       // Validate that email is provided (either directly or generated)
@@ -314,10 +325,14 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       });
     }
 
-    // Register any new classifications
+    // Register any new classifications and domains
     for (const user of users) {
       if (user.accountClassification) {
         await registerClassification(user.accountClassification);
+      }
+      
+      if (user.domain) {
+        await registerDomain(user.domain);
       }
     }
 
@@ -367,7 +382,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 // Get all domains
 export const getDomains = async (req: Request, res: Response): Promise<Response> => {
   try {
-    // Get all unique domains
+    // Get all unique domains from users with active or inactive status
     const domains = await User.findAll({
       attributes: [
         [sequelize.fn('DISTINCT', sequelize.col('domain')), 'domain'],
@@ -377,7 +392,9 @@ export const getDomains = async (req: Request, res: Response): Promise<Response>
         domain: {
           [Op.not]: null
         }
-      } as any
+      } as any,
+      // Order by domain name for consistent results
+      order: [[sequelize.col('domain'), 'ASC']]
     });
 
     return res.status(200).json({
@@ -450,7 +467,9 @@ export const getAccountClassifications = async (req: Request, res: Response): Pr
         accountClassification: {
           [Op.not]: null
         }
-      } as any
+      } as any,
+      // Order by classification name for consistent results
+      order: [[sequelize.col('accountClassification'), 'ASC']]
     });
 
     return res.status(200).json({
@@ -484,6 +503,33 @@ const registerClassification = async (classification: string): Promise<void> => 
     });
 
     // Delete the dummy user since we only needed to register the classification
+    await dummyUser.destroy();
+  }
+};
+
+// Register a domain (internal use)
+const registerDomain = async (domain: string): Promise<void> => {
+  // Check if domain already exists
+  const existingDomain = await User.findOne({
+    where: {
+      domain: domain
+    }
+  });
+
+  if (!existingDomain) {
+    // Create a dummy user with this domain to register it
+    // In a real implementation, you might want to store domains separately
+    const dummyUser = await User.create({
+      username: `domain_${Date.now()}`,
+      email: `domain_${Date.now()}@${domain}`,
+      password: 'dummy_password',
+      role: 'user',
+      isActive: false,
+      domain: domain,
+      isDefaultDomain: false
+    });
+
+    // Delete the dummy user since we only needed to register the domain
     await dummyUser.destroy();
   }
 };
