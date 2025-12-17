@@ -31,7 +31,7 @@ const initAdmin = async () => {
     
     const adminUser = await User.create({
       username: 'admin',
-      email: 'admin@mailserver.local',
+      email: 'admin@bltnm.store',
       password: hashedPassword,
       role: 'admin',
       isActive: true,
