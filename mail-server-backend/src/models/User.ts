@@ -11,6 +11,7 @@ interface UserAttributes {
   isActive: boolean;
   domain?: string;
   isDefaultDomain?: boolean;
+  accountClassification?: string;
   pop3Host?: string;
   pop3Port?: number;
   pop3User?: string;
@@ -31,6 +32,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public isActive!: boolean;
   public domain!: string | undefined;
   public isDefaultDomain!: boolean | undefined;
+  public accountClassification!: string | undefined;
   public pop3Host!: string | undefined;
   public pop3Port!: number | undefined;
   public pop3User!: string | undefined;
@@ -98,6 +100,10 @@ User.init(
     isDefaultDomain: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+    },
+    accountClassification: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     pop3TLS: {
       type: DataTypes.BOOLEAN,

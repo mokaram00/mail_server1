@@ -148,7 +148,7 @@ export const getSystemStats = async (req: Request, res: Response): Promise<Respo
 
 export const createUser = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { username, email, password, role, domain, isDefaultDomain } = req.body;
+    const { username, email, password, role, domain, isDefaultDomain, accountClassification } = req.body;
 
     // Validate input
     if (!username || !email || !password) {
@@ -184,6 +184,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       isActive: true, // Default active status
       domain: domain || null,
       isDefaultDomain: isDefaultDomain || false,
+      accountClassification: accountClassification || null,
     });
 
     // Return user data without password
@@ -195,6 +196,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       isActive: user.isActive,
       domain: user.domain,
       isDefaultDomain: user.isDefaultDomain,
+      accountClassification: user.accountClassification,
     };
 
     return res.status(201).json({
@@ -267,6 +269,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
         isActive: true,
         domain: user.domain || null,
         isDefaultDomain: user.isDefaultDomain || false,
+        accountClassification: user.accountClassification || null,
       });
     }
 
@@ -282,6 +285,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       isActive: user.isActive,
       domain: user.domain,
       isDefaultDomain: user.isDefaultDomain,
+      accountClassification: user.accountClassification,
     }));
 
     return res.status(201).json({
@@ -322,6 +326,30 @@ export const getDomains = async (req: Request, res: Response): Promise<Response>
   }
 };
 
+// Get all account classifications
+export const getAccountClassifications = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    // Get all unique account classifications
+    const classifications = await User.findAll({
+      attributes: [
+        [sequelize.fn('DISTINCT', sequelize.col('accountClassification')), 'accountClassification']
+      ],
+      where: {
+        accountClassification: {
+          [Op.not]: null
+        }
+      } as any
+    });
+
+    return res.status(200).json({
+      classifications: classifications.map(c => c.getDataValue('accountClassification'))
+    });
+  } catch (error) {
+    console.error('Get account classifications error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 // Set default domain
 export const setDefaultDomain = async (req: Request, res: Response): Promise<Response> => {
   try {
@@ -349,6 +377,131 @@ export const setDefaultDomain = async (req: Request, res: Response): Promise<Res
     });
   } catch (error) {
     console.error('Set default domain error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Update admin profile
+export const updateAdminProfile = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { username, email } = req.body;
+    const adminId = req.user.id;
+
+    // Validate input
+    if (!username && !email) {
+      return res.status(400).json({ message: 'Username or email is required' });
+    }
+
+    // Check if email already exists (if updating email)
+    if (email) {
+      const existingUser = await User.findOne({
+        where: {
+          email: email,
+          id: {
+            [Op.ne]: adminId
+          }
+        }
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already exists' });
+      }
+    }
+
+    // Update admin profile
+    const updates: any = {};
+    if (username) updates.username = username;
+    if (email) updates.email = email;
+
+    const updatedAdmin = await User.update(updates, {
+      where: { id: adminId }
+    });
+
+    if (updatedAdmin[0] === 0) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    // Get updated admin data
+    const admin = await User.findByPk(adminId, {
+      attributes: { exclude: ['password'] }
+    });
+
+    return res.status(200).json({
+      message: 'Profile updated successfully',
+      user: admin
+    });
+  } catch (error) {
+    console.error('Update admin profile error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Change admin password
+export const changeAdminPassword = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const adminId = req.user.id;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+    }
+
+    // Get admin with password
+    const admin = await User.findByPk(adminId);
+
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, admin.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    await User.update(
+      { password: hashedPassword },
+      { where: { id: adminId } }
+    );
+
+    return res.status(200).json({
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Change admin password error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get admin profile
+export const getAdminProfile = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const adminId = req.user.id;
+
+    // Get admin data without password
+    const admin = await User.findByPk(adminId, {
+      attributes: { exclude: ['password'] }
+    });
+
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    return res.status(200).json({
+      user: admin
+    });
+  } catch (error) {
+    console.error('Get admin profile error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
