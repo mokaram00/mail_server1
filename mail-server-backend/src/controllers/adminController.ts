@@ -180,27 +180,33 @@ export const getSystemStats = async (req: Request, res: Response): Promise<Respo
 export const createUser = async (req: Request, res: Response): Promise<Response> => {
   try {
     let { username, email, password, role, domain, isDefaultDomain, accountClassification } = req.body;
+    console.log('Creating user with data:', { username, email, role, domain, isDefaultDomain, accountClassification });
 
     // Validate input
     if (!username || !password) {
+      console.log('User validation failed: username and password are required');
       return res.status(400).json({ message: 'Username and password are required' });
     }
 
     // Automatically generate email if domain is provided and email is not
     if (domain && !email) {
       email = `${username}@${domain}`;
+      console.log(`Generated email from domain: ${email}`);
     } else if (domain && email && !email.endsWith(`@${domain}`)) {
       // If both email and domain are provided but email doesn't match domain, use the domain
       email = `${username}@${domain}`;
+      console.log(`Overrode email with domain-based email: ${email}`);
     }
 
     // Validate that email is provided (either directly or generated)
     if (!email) {
+      console.log('Email validation failed: email is required');
       return res.status(400).json({ message: 'Email is required' });
     }
 
     // Validate role
     if (role && !['admin', 'user'].includes(role)) {
+      console.log(`Role validation failed: invalid role ${role}`);
       return res.status(400).json({ message: 'Invalid role parameter' });
     }
 
@@ -212,22 +218,26 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     });
 
     if (existingUser) {
+      console.log(`User validation failed: user with email ${email} already exists`);
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
     // Register the classification if provided
     if (accountClassification) {
+      console.log(`Registering classification: ${accountClassification}`);
       await registerClassification(accountClassification);
     }
 
     // Register the domain if provided
     if (domain) {
+      console.log(`Registering domain: ${domain}`);
       await registerDomain(domain);
     }
 
     // Hash password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
+    console.log('Password hashed successfully');
 
     // Create user
     const user = await User.create({
@@ -240,6 +250,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       isDefaultDomain: isDefaultDomain || false,
       accountClassification: accountClassification || null,
     });
+    console.log(`User created successfully with ID: ${user.id}`);
 
     // Return user data without password
     const userData = {
@@ -382,6 +393,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 // Get all domains
 export const getDomains = async (req: Request, res: Response): Promise<Response> => {
   try {
+    console.log('Fetching all domains');
     // Get all unique domains from users with active or inactive status
     const domains = await User.findAll({
       attributes: [
@@ -396,12 +408,16 @@ export const getDomains = async (req: Request, res: Response): Promise<Response>
       // Order by domain name for consistent results
       order: [[sequelize.col('domain'), 'ASC']]
     });
+    
+    console.log(`Found ${domains.length} domains`);
+    const domainList = domains.map(d => ({
+      domain: d.getDataValue('domain'),
+      isDefault: d.getDataValue('isDefaultDomain')
+    }));
+    console.log('Domain list:', domainList);
 
     return res.status(200).json({
-      domains: domains.map(d => ({
-        domain: d.getDataValue('domain'),
-        isDefault: d.getDataValue('isDefaultDomain')
-      }))
+      domains: domainList
     });
   } catch (error) {
     console.error('Get domains error:', error);
@@ -413,9 +429,11 @@ export const getDomains = async (req: Request, res: Response): Promise<Response>
 export const addDomain = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { domain } = req.body;
+    console.log(`Received request to add domain: ${domain}`);
 
     // Validate input
     if (!domain) {
+      console.log('Domain validation failed: domain is required');
       return res.status(400).json({ message: 'Domain is required' });
     }
 
@@ -427,9 +445,11 @@ export const addDomain = async (req: Request, res: Response): Promise<Response> 
     });
 
     if (existingDomain) {
+      console.log(`Domain ${domain} already exists`);
       return res.status(400).json({ message: 'Domain already exists' });
     }
 
+    console.log(`Creating dummy user for domain: ${domain}`);
     // Create a dummy user with this domain to register it
     // In a real implementation, you might want to store domains separately
     const dummyUser = await User.create({
@@ -442,9 +462,11 @@ export const addDomain = async (req: Request, res: Response): Promise<Response> 
       isDefaultDomain: false
     });
 
+    console.log(`Dummy user created, now destroying it`);
     // Delete the dummy user since we only needed to register the domain
     await dummyUser.destroy();
 
+    console.log(`Domain ${domain} added successfully`);
     return res.status(201).json({
       message: 'Domain added successfully',
       domain
@@ -509,28 +531,43 @@ const registerClassification = async (classification: string): Promise<void> => 
 
 // Register a domain (internal use)
 const registerDomain = async (domain: string): Promise<void> => {
+  console.log(`Attempting to register domain: ${domain}`);
+  
   // Check if domain already exists
   const existingDomain = await User.findOne({
     where: {
       domain: domain
     }
   });
+  
+  console.log(`Domain ${domain} exists: ${!!existingDomain}`);
 
   if (!existingDomain) {
-    // Create a dummy user with this domain to register it
-    // In a real implementation, you might want to store domains separately
-    const dummyUser = await User.create({
-      username: `domain_${Date.now()}`,
-      email: `domain_${Date.now()}@${domain}`,
-      password: 'dummy_password',
-      role: 'user',
-      isActive: false,
-      domain: domain,
-      isDefaultDomain: false
-    });
+    console.log(`Creating dummy user for domain: ${domain}`);
+    try {
+      // Create a dummy user with this domain to register it
+      // In a real implementation, you might want to store domains separately
+      const dummyUser = await User.create({
+        username: `domain_${Date.now()}`,
+        email: `domain_${Date.now()}@${domain}`,
+        password: 'dummy_password',
+        role: 'user',
+        isActive: false,
+        domain: domain,
+        isDefaultDomain: false
+      });
+      
+      console.log(`Dummy user created for domain: ${domain}`);
 
-    // Delete the dummy user since we only needed to register the domain
-    await dummyUser.destroy();
+      // Delete the dummy user since we only needed to register the domain
+      await dummyUser.destroy();
+      console.log(`Dummy user destroyed for domain: ${domain}`);
+    } catch (error) {
+      console.error(`Error creating dummy user for domain ${domain}:`, error);
+      throw error;
+    }
+  } else {
+    console.log(`Domain ${domain} already exists, skipping registration`);
   }
 };
 
