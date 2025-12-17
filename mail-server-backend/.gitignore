@@ -11,6 +11,7 @@ dist
 !.yarn/releases
 !.yarn/versions
 
+database.sqlite*
 # testing
 /coverage
 
