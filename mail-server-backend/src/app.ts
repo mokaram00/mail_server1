@@ -7,6 +7,7 @@ import emailRoutes from './routes/emailRoutes';
 import emailReceiveRoutes from './routes/emailReceiveRoutes';
 import adminRoutes from './routes/adminRoutes';
 import sequelize from './config/db';
+import { QueryTypes } from 'sequelize';
 
 // Load environment variables
 dotenv.config();
@@ -50,15 +51,52 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Database connection established successfully.');
 
-    // Sync models with error handling
+    // Sync models with improved error handling
     try {
       await sequelize.sync({ alter: true });
       console.log('Database synced successfully.');
     } catch (syncError: any) {
       console.error('Database sync error:', syncError.message);
       
-      // If it's a unique constraint error, try a different approach
-      if (syncError.name === 'SequelizeUniqueConstraintError') {
+      // Handle SQLite backup table issues
+      if (syncError.name === 'SequelizeDatabaseError' && syncError.parent?.code === 'SQLITE_ERROR') {
+        console.log('Attempting to resolve SQLite backup table issue...');
+        
+        try {
+          // Check if users_backup table exists
+          const tables: any[] = await sequelize.query(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='users_backup';",
+            { type: QueryTypes.SELECT }
+          );
+          
+          if (tables.length > 0) {
+            console.log('Dropping users_backup table to resolve schema mismatch...');
+            await sequelize.query('DROP TABLE IF EXISTS users_backup;');
+            console.log('users_backup table dropped successfully.');
+            
+            // Try syncing again
+            await sequelize.sync({ alter: true });
+            console.log('Database synced successfully after dropping backup table.');
+          } else {
+            // Try a different approach
+            console.log('Attempting to recreate tables...');
+            await sequelize.sync({ force: true });
+            console.log('Database recreated successfully.');
+          }
+        } catch (cleanupError) {
+          console.error('Failed to clean up backup table:', cleanupError);
+          
+          // Final fallback: force sync (WARNING: This will drop data!)
+          // Only use this in development environments
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Attempting force sync (will drop data!)...');
+            await sequelize.sync({ force: true });
+            console.log('Database force synced successfully.');
+          } else {
+            throw new Error('Unable to sync database in production environment');
+          }
+        }
+      } else if (syncError.name === 'SequelizeUniqueConstraintError') {
         console.log('Attempting to resolve unique constraint issue...');
         
         // Try syncing without altering existing tables
