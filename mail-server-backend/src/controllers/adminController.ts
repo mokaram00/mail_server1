@@ -212,6 +212,11 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
+    // Register the classification if provided
+    if (accountClassification) {
+      await registerClassification(accountClassification);
+    }
+
     // Hash password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -307,6 +312,13 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
         message: 'Some users with these emails already exist',
         existingEmails: existingEmails
       });
+    }
+
+    // Register any new classifications
+    for (const user of users) {
+      if (user.accountClassification) {
+        await registerClassification(user.accountClassification);
+      }
     }
 
     // Hash passwords and prepare user data
@@ -450,27 +462,16 @@ export const getAccountClassifications = async (req: Request, res: Response): Pr
   }
 };
 
-// Add a new account classification
-export const addAccountClassification = async (req: Request, res: Response): Promise<Response> => {
-  try {
-    const { classification } = req.body;
-
-    // Validate input
-    if (!classification) {
-      return res.status(400).json({ message: 'Classification is required' });
+// Register a classification (internal use)
+const registerClassification = async (classification: string): Promise<void> => {
+  // Check if classification already exists
+  const existingClassification = await User.findOne({
+    where: {
+      accountClassification: classification
     }
+  });
 
-    // Check if classification already exists
-    const existingClassification = await User.findOne({
-      where: {
-        accountClassification: classification
-      }
-    });
-
-    if (existingClassification) {
-      return res.status(400).json({ message: 'Classification already exists' });
-    }
-
+  if (!existingClassification) {
     // Create a dummy user with this classification to register it
     // In a real implementation, you might want to store classifications separately
     const dummyUser = await User.create({
@@ -484,6 +485,21 @@ export const addAccountClassification = async (req: Request, res: Response): Pro
 
     // Delete the dummy user since we only needed to register the classification
     await dummyUser.destroy();
+  }
+};
+
+// Add a new account classification
+export const addAccountClassification = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { classification } = req.body;
+
+    // Validate input
+    if (!classification) {
+      return res.status(400).json({ message: 'Classification is required' });
+    }
+
+    // Register the classification
+    await registerClassification(classification);
 
     return res.status(201).json({
       message: 'Classification added successfully',

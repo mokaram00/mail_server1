@@ -37,7 +37,6 @@ export default function UsersManagement() {
   const [showBulkCreateForm, setShowBulkCreateForm] = useState(false);
   const [newUser, setNewUser] = useState({
     username: '',
-    email: '',
     password: '',
     role: 'user',
     domain: '',
@@ -89,7 +88,7 @@ export default function UsersManagement() {
       }
       
       setSuccess('User created successfully');
-      setNewUser({ username: '', email: '', password: '', role: 'user', domain: '', isDefaultDomain: false, accountClassification: '' });
+      setNewUser({ username: '', password: '', role: 'user', domain: '', isDefaultDomain: false, accountClassification: '' });
       setShowCreateForm(false);
       
       // Refresh users list
@@ -112,8 +111,8 @@ export default function UsersManagement() {
       const usersArray = bulkUsers.split('\n')
         .filter(line => line.trim() !== '')
         .map(line => {
-          const [username, email, password, role = 'user', domain = '', accountClassification = ''] = line.split(',');
-          return { username, email, password, role, domain, accountClassification };
+          const [username, password, role = 'user', domain = '', accountClassification = ''] = line.split(',');
+          return { username, password, role, domain, accountClassification };
         });
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/bulk`, {
@@ -422,17 +421,6 @@ export default function UsersManagement() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <input
-                type="email"
-                value={newUser.email}
-                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
-                required
-              />
-            </div>
-            
-            <div>
               <label className="block text-sm font-medium mb-1">Password</label>
               <input
                 type="password"
@@ -483,30 +471,38 @@ export default function UsersManagement() {
             
             <div>
               <label className="block text-sm font-medium mb-1">Account Classification (optional)</label>
-              <input
-                type="text"
-                value={newUser.accountClassification}
-                onChange={(e) => setNewUser({...newUser, accountClassification: e.target.value})}
-                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
-                placeholder="rockstar"
-              />
-            </div>
-            
-            {newUser.domain && (
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isDefaultDomain"
-                  checked={newUser.isDefaultDomain}
-                  onChange={(e) => setNewUser({...newUser, isDefaultDomain: e.target.checked})}
-                  className="mr-2"
-                />
-                <label htmlFor="isDefaultDomain" className="text-sm">
-                  Set as default domain
-                </label>
+              <div className="flex space-x-2">
+                <select
+                  value={newUser.accountClassification || ''}
+                  onChange={(e) => setNewUser({...newUser, accountClassification: e.target.value})}
+                  className="flex-1 px-3 py-2 border border-foreground/20 rounded bg-background"
+                >
+                  <option value="">Select existing or create new</option>
+                  {classifications.map((classification) => (
+                    <option key={classification} value={classification}>
+                      {classification}
+                    </option>
+                  ))}
+                </select>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const newClassification = prompt('Enter new classification name:');
+                    if (newClassification) {
+                      setNewUser({...newUser, accountClassification: newClassification});
+                    }
+                  }}
+                  className="px-3 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
+                >
+                  + New
+                </button>
               </div>
-            )}
-            
+              {newUser.accountClassification && !classifications.includes(newUser.accountClassification) && (
+                <div className="mt-2 text-sm text-foreground/80">
+                  Will create new classification: <strong>{newUser.accountClassification}</strong>
+                </div>
+              )}
+            </div>
             <div className="flex space-x-3">
               <button 
                 type="submit"
@@ -599,7 +595,7 @@ export default function UsersManagement() {
                     <div className="font-medium">{user.username}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-foreground/80">{user.email}</div>
+                    <div className="text-foreground/80">{user.username}@{user.domain}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-foreground/80">
