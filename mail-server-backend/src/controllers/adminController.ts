@@ -278,15 +278,19 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
 export const bulkCreateUsers = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { users } = req.body;
+    console.log(`Bulk creating ${users.length} users`);
 
     // Validate input
     if (!Array.isArray(users) || users.length === 0) {
+      console.log('Bulk create validation failed: users array is required and cannot be empty');
       return res.status(400).json({ message: 'Users array is required and cannot be empty' });
     }
 
     // Validate each user and generate emails if needed
     for (const user of users) {
+      console.log('Validating user:', user);
       if (!user.username || !user.password) {
+        console.log('User validation failed: each user must have username and password');
         return res.status(400).json({ 
           message: 'Each user must have username and password',
           user: user
@@ -296,13 +300,16 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       // Automatically generate email if domain is provided and email is not
       if (user.domain && !user.email) {
         user.email = `${user.username}@${user.domain}`;
+        console.log(`Generated email for user ${user.username}: ${user.email}`);
       } else if (user.domain && user.email && !user.email.endsWith(`@${user.domain}`)) {
         // If both email and domain are provided but email doesn't match domain, use the domain
         user.email = `${user.username}@${user.domain}`;
+        console.log(`Overrode email for user ${user.username}: ${user.email}`);
       }
 
       // Validate that email is provided (either directly or generated)
       if (!user.email) {
+        console.log(`Email validation failed for user ${user.username}: each user must have an email`);
         return res.status(400).json({ 
           message: 'Each user must have an email',
           user: user
@@ -311,6 +318,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 
       // Validate role if provided
       if (user.role && !['admin', 'user'].includes(user.role)) {
+        console.log(`Role validation failed for user ${user.username}: invalid role ${user.role}`);
         return res.status(400).json({ 
           message: 'Invalid role parameter',
           user: user
@@ -320,6 +328,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 
     // Check for existing users
     const emails = users.map(user => user.email);
+    console.log('Checking for existing users with emails:', emails);
     const existingUsers = await User.findAll({
       where: {
         email: {
@@ -330,6 +339,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 
     if (existingUsers.length > 0) {
       const existingEmails = existingUsers.map(user => user.email);
+      console.log('Existing users found with emails:', existingEmails);
       return res.status(400).json({ 
         message: 'Some users with these emails already exist',
         existingEmails: existingEmails
@@ -337,17 +347,21 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
     }
 
     // Register any new classifications and domains
+    console.log('Registering classifications and domains');
     for (const user of users) {
       if (user.accountClassification) {
+        console.log(`Registering classification for user ${user.username}: ${user.accountClassification}`);
         await registerClassification(user.accountClassification);
       }
       
       if (user.domain) {
+        console.log(`Registering domain for user ${user.username}: ${user.domain}`);
         await registerDomain(user.domain);
       }
     }
 
     // Hash passwords and prepare user data
+    console.log('Hashing passwords and preparing user data');
     const usersToCreate = [];
     for (const user of users) {
       const saltRounds = 10;
@@ -366,7 +380,9 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
     }
 
     // Create all users
+    console.log('Creating users');
     const createdUsers = await User.bulkCreate(usersToCreate);
+    console.log(`Created ${createdUsers.length} users successfully`);
 
     // Return user data without passwords
     const userData = createdUsers.map(user => ({
@@ -505,27 +521,41 @@ export const getAccountClassifications = async (req: Request, res: Response): Pr
 
 // Register a classification (internal use)
 const registerClassification = async (classification: string): Promise<void> => {
+  console.log(`Attempting to register classification: ${classification}`);
+  
   // Check if classification already exists
   const existingClassification = await User.findOne({
     where: {
       accountClassification: classification
     }
   });
+  
+  console.log(`Classification ${classification} exists: ${!!existingClassification}`);
 
   if (!existingClassification) {
-    // Create a dummy user with this classification to register it
-    // In a real implementation, you might want to store classifications separately
-    const dummyUser = await User.create({
-      username: `classification_${Date.now()}`,
-      email: `classification_${Date.now()}@temp.com`,
-      password: 'dummy_password',
-      role: 'user',
-      isActive: false,
-      accountClassification: classification
-    });
+    console.log(`Creating dummy user for classification: ${classification}`);
+    try {
+      // Create a dummy user with this classification to register it
+      // In a real implementation, you might want to store classifications separately
+      const dummyUser = await User.create({
+        username: `classification_${Date.now()}`,
+        email: `classification_${Date.now()}@temp.com`,
+        password: 'dummy_password',
+        role: 'user',
+        isActive: false,
+        accountClassification: classification
+      });
 
-    // Delete the dummy user since we only needed to register the classification
-    await dummyUser.destroy();
+      console.log(`Dummy user created for classification: ${classification}`);
+      // Delete the dummy user since we only needed to register the classification
+      await dummyUser.destroy();
+      console.log(`Dummy user destroyed for classification: ${classification}`);
+    } catch (error) {
+      console.error(`Error creating dummy user for classification ${classification}:`, error);
+      throw error;
+    }
+  } else {
+    console.log(`Classification ${classification} already exists, skipping registration`);
   }
 };
 
@@ -575,15 +605,19 @@ const registerDomain = async (domain: string): Promise<void> => {
 export const addAccountClassification = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { classification } = req.body;
+    console.log(`Received request to add classification: ${classification}`);
 
     // Validate input
     if (!classification) {
+      console.log('Classification validation failed: classification is required');
       return res.status(400).json({ message: 'Classification is required' });
     }
 
+    console.log(`Registering classification: ${classification}`);
     // Register the classification
     await registerClassification(classification);
 
+    console.log(`Classification ${classification} added successfully`);
     return res.status(201).json({
       message: 'Classification added successfully',
       classification
