@@ -22,6 +22,8 @@ export default function AdminLayout({
       setActiveTab('domains');
     } else if (pathname?.includes('/admin/classifications')) {
       setActiveTab('classifications');
+    } else if (pathname?.includes('/admin/emails')) {
+      setActiveTab('emails');
     } else if (pathname?.includes('/admin/settings')) {
       setActiveTab('settings');
     } else {
@@ -138,6 +140,16 @@ export default function AdminLayout({
               }`}
             >
               Classifications
+            </button>
+            <button
+              onClick={() => router.push('/admin/emails')}
+              className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'emails'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-foreground/60 hover:text-foreground'
+              }`}
+            >
+              Emails
             </button>
             <button
               onClick={() => router.push('/admin/settings')}

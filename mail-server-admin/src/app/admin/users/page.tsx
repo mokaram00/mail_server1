@@ -16,6 +16,10 @@ interface User {
   updatedAt: string;
 }
 
+interface PasswordResponse {
+  password: string;
+}
+
 interface Domain {
   domain: string;
   isDefault: boolean;
@@ -231,6 +235,37 @@ export default function UsersManagement() {
     }
   };
 
+  const updateUserClassification = async (userId: number, newClassification: string) => {
+    if (!token) return;
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/classification`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ classification: newClassification || null }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update user classification');
+      }
+      
+      const data = await response.json();
+      // Update user in state
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, accountClassification: data.user.accountClassification } : user
+      ));
+      
+      // Refresh user counts by classification
+      fetchClassifications(token);
+    } catch (err) {
+      setError('Failed to update user classification');
+      console.error(err);
+    }
+  };
+
   const deactivateUser = async (userId: number) => {
     if (!token) return;
     
@@ -254,6 +289,34 @@ export default function UsersManagement() {
       ));
     } catch (err) {
       setError('Failed to deactivate user');
+      console.error(err);
+    }
+  };
+
+  const showUserPassword = async (userId: number) => {
+    if (!token) return;
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/password`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get user password');
+      }
+      
+      const data: PasswordResponse = await response.json();
+      
+      // Show the password to the admin
+      alert(`Password for user: ${data.password}`);
+      
+      setSuccess('Password retrieved successfully');
+    } catch (err) {
+      setError('Failed to get user password');
       console.error(err);
     }
   };
@@ -394,13 +457,28 @@ export default function UsersManagement() {
             
             <div>
               <label className="block text-sm font-medium mb-1">Domain (optional)</label>
-              <input
-                type="text"
+              <select
                 value={newUser.domain}
                 onChange={(e) => setNewUser({...newUser, domain: e.target.value})}
                 className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
-                placeholder="example.com"
-              />
+              >
+                <option value="">Select a domain</option>
+                {domains.map((domain) => (
+                  <option key={domain.domain} value={domain.domain}>
+                    {domain.domain} {domain.isDefault ? '(Default)' : ''}
+                  </option>
+                ))}
+                <option value="">Other (specify below)</option>
+              </select>
+              {(newUser.domain === '' || !domains.some(d => d.domain === newUser.domain)) && (
+                <input
+                  type="text"
+                  value={newUser.domain}
+                  onChange={(e) => setNewUser({...newUser, domain: e.target.value})}
+                  className="w-full mt-2 px-3 py-2 border border-foreground/20 rounded bg-background"
+                  placeholder="Enter custom domain"
+                />
+              )}
             </div>
             
             <div>
@@ -414,18 +492,20 @@ export default function UsersManagement() {
               />
             </div>
             
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isDefaultDomain"
-                checked={newUser.isDefaultDomain}
-                onChange={(e) => setNewUser({...newUser, isDefaultDomain: e.target.checked})}
-                className="mr-2"
-              />
-              <label htmlFor="isDefaultDomain" className="text-sm">
-                Set as default domain
-              </label>
-            </div>
+            {newUser.domain && (
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isDefaultDomain"
+                  checked={newUser.isDefaultDomain}
+                  onChange={(e) => setNewUser({...newUser, isDefaultDomain: e.target.checked})}
+                  className="mr-2"
+                />
+                <label htmlFor="isDefaultDomain" className="text-sm">
+                  Set as default domain
+                </label>
+              </div>
+            )}
             
             <div className="flex space-x-3">
               <button 
@@ -454,6 +534,8 @@ export default function UsersManagement() {
             Enter one user per line in the format: username,email,password,role,domain,classification
             <br />
             Role, domain, and classification are optional (defaults to 'user', empty, and empty respectively)
+            <br />
+            Available domains: {domains.map(d => d.domain).join(', ')}
           </p>
           
           <form onSubmit={handleBulkCreateUsers} className="space-y-4">
@@ -530,8 +612,19 @@ export default function UsersManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-foreground/80">
-                      {user.accountClassification || '-'}
+                    <div className="flex items-center space-x-2">
+                      <select
+                        value={user.accountClassification || ''}
+                        onChange={(e) => updateUserClassification(user.id, e.target.value)}
+                        className="bg-background border border-foreground/20 rounded px-2 py-1 text-sm"
+                      >
+                        <option value="">No Classification</option>
+                        {classifications.map((classification) => (
+                          <option key={classification} value={classification}>
+                            {classification}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -597,6 +690,13 @@ export default function UsersManagement() {
                         className="px-3 py-1 bg-indigo-500/20 text-indigo-500 rounded hover:bg-indigo-500/30 transition-colors"
                       >
                         Inbox
+                      </button>
+                      
+                      <button
+                        onClick={() => showUserPassword(user.id)}
+                        className="px-3 py-1 bg-yellow-500/20 text-yellow-500 rounded hover:bg-yellow-500/30 transition-colors"
+                      >
+                        Show Pass
                       </button>
                     </div>
                   </td>

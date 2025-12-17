@@ -15,7 +15,7 @@ export default function DomainsManagement() {
   const [success, setSuccess] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [newDomain, setNewDomain] = useState('');
-  const [showDomainForm, setShowDomainForm] = useState(false);
+  const [showAddDomainForm, setShowAddDomainForm] = useState(false);
   const router = useRouter();
 
   // Check if user is authenticated and is admin
@@ -60,6 +60,41 @@ export default function DomainsManagement() {
       fetchDomains(token);
     } catch (err: any) {
       setError(err.message || 'Failed to set default domain');
+      console.error(err);
+    }
+  };
+
+  const handleAddDomain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !newDomain) return;
+    
+    try {
+      setError(null);
+      setSuccess(null);
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/domains`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ domain: newDomain }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add domain');
+      }
+      
+      setSuccess(data.message);
+      setNewDomain('');
+      setShowAddDomainForm(false);
+      
+      // Refresh domains
+      fetchDomains(token);
+    } catch (err: any) {
+      setError(err.message || 'Failed to add domain');
       console.error(err);
     }
   };
@@ -111,6 +146,52 @@ export default function DomainsManagement() {
       )}
 
       <h1 className="text-3xl font-bold mb-8">Domain Management</h1>
+
+      {/* Add Domain Form */}
+      <div className="mb-6">
+        <button 
+          onClick={() => setShowAddDomainForm(!showAddDomainForm)}
+          className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
+        >
+          {showAddDomainForm ? 'Cancel' : 'Add New Domain'}
+        </button>
+      </div>
+
+      {showAddDomainForm && (
+        <div className="mb-8 bg-card border border-foreground/20 rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4">Add New Domain</h2>
+          
+          <form onSubmit={handleAddDomain} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Domain Name</label>
+              <input
+                type="text"
+                value={newDomain}
+                onChange={(e) => setNewDomain(e.target.value)}
+                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
+                placeholder="example.com"
+                required
+              />
+            </div>
+            
+            <div className="flex space-x-3">
+              <button 
+                type="submit"
+                className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
+              >
+                Add Domain
+              </button>
+              <button 
+                type="button"
+                onClick={() => setShowAddDomainForm(false)}
+                className="px-4 py-2 border border-foreground/20 rounded-lg hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Domain Management Form */}
       <div className="mb-8 bg-card border border-foreground/20 rounded-lg shadow-sm p-6">

@@ -8,7 +8,10 @@ export default function ClassificationsManagement() {
   const [usersByClassification, setUsersByClassification] = useState<{[key: string]: number}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [newClassification, setNewClassification] = useState('');
+  const [showAddClassificationForm, setShowAddClassificationForm] = useState(false);
   const router = useRouter();
 
   // Check if user is authenticated and is admin
@@ -79,6 +82,42 @@ export default function ClassificationsManagement() {
     }
   };
 
+  const handleAddClassification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !newClassification) return;
+    
+    try {
+      setError(null);
+      setSuccess(null);
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/classifications`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ classification: newClassification }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add classification');
+      }
+      
+      setSuccess(data.message);
+      setNewClassification('');
+      setShowAddClassificationForm(false);
+      
+      // Refresh classifications
+      fetchClassifications(token);
+      fetchUsersByClassification(token);
+    } catch (err: any) {
+      setError(err.message || 'Failed to add classification');
+      console.error(err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -94,8 +133,60 @@ export default function ClassificationsManagement() {
           {error}
         </div>
       )}
+      
+      {success && (
+        <div className="mb-6 p-4 bg-green-500/20 border border-green-500 rounded-lg text-green-500">
+          {success}
+        </div>
+      )}
 
       <h1 className="text-3xl font-bold mb-8">Account Classifications</h1>
+
+      {/* Add Classification Form */}
+      <div className="mb-6">
+        <button 
+          onClick={() => setShowAddClassificationForm(!showAddClassificationForm)}
+          className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
+        >
+          {showAddClassificationForm ? 'Cancel' : 'Add New Classification'}
+        </button>
+      </div>
+
+      {showAddClassificationForm && (
+        <div className="mb-8 bg-card border border-foreground/20 rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4">Add New Classification</h2>
+          
+          <form onSubmit={handleAddClassification} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Classification Name</label>
+              <input
+                type="text"
+                value={newClassification}
+                onChange={(e) => setNewClassification(e.target.value)}
+                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
+                placeholder="rockstar"
+                required
+              />
+            </div>
+            
+            <div className="flex space-x-3">
+              <button 
+                type="submit"
+                className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
+              >
+                Add Classification
+              </button>
+              <button 
+                type="button"
+                onClick={() => setShowAddClassificationForm(false)}
+                className="px-4 py-2 border border-foreground/20 rounded-lg hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="bg-card border border-foreground/20 rounded-lg shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-foreground/20">

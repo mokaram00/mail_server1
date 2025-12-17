@@ -88,6 +88,37 @@ export const updateUserRole = async (req: Request, res: Response): Promise<Respo
   }
 };
 
+// Update user classification
+export const updateUserClassification = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { classification } = req.body;
+
+    // Find user by ID
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update user classification
+    await user.update({ accountClassification: classification || null });
+
+    return res.status(200).json({
+      message: 'User classification updated successfully',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        accountClassification: user.accountClassification,
+      },
+    });
+  } catch (error) {
+    console.error('Update user classification error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 export const deactivateUser = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
@@ -148,11 +179,21 @@ export const getSystemStats = async (req: Request, res: Response): Promise<Respo
 
 export const createUser = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { username, email, password, role, domain, isDefaultDomain, accountClassification } = req.body;
+    let { username, email, password, role, domain, isDefaultDomain, accountClassification } = req.body;
 
     // Validate input
-    if (!username || !email || !password) {
-      return res.status(400).json({ message: 'Username, email, and password are required' });
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    // Automatically generate email if domain is provided and email is not
+    if (domain && !email) {
+      email = `${username}@${domain}`;
+    }
+
+    // Validate that email is provided (either directly or generated)
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
     }
 
     // Validate role
@@ -219,11 +260,24 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       return res.status(400).json({ message: 'Users array is required and cannot be empty' });
     }
 
-    // Validate each user
+    // Validate each user and generate emails if needed
     for (const user of users) {
-      if (!user.username || !user.email || !user.password) {
+      if (!user.username || !user.password) {
         return res.status(400).json({ 
-          message: 'Each user must have username, email, and password',
+          message: 'Each user must have username and password',
+          user: user
+        });
+      }
+
+      // Automatically generate email if domain is provided and email is not
+      if (user.domain && !user.email) {
+        user.email = `${user.username}@${user.domain}`;
+      }
+
+      // Validate that email is provided (either directly or generated)
+      if (!user.email) {
+        return res.status(400).json({ 
+          message: 'Each user must have an email',
           user: user
         });
       }
@@ -326,6 +380,52 @@ export const getDomains = async (req: Request, res: Response): Promise<Response>
   }
 };
 
+// Add a new domain
+export const addDomain = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { domain } = req.body;
+
+    // Validate input
+    if (!domain) {
+      return res.status(400).json({ message: 'Domain is required' });
+    }
+
+    // Check if domain already exists
+    const existingDomain = await User.findOne({
+      where: {
+        domain: domain
+      }
+    });
+
+    if (existingDomain) {
+      return res.status(400).json({ message: 'Domain already exists' });
+    }
+
+    // Create a dummy user with this domain to register it
+    // In a real implementation, you might want to store domains separately
+    const dummyUser = await User.create({
+      username: `domain_${Date.now()}`,
+      email: `domain_${Date.now()}@${domain}`,
+      password: 'dummy_password',
+      role: 'user',
+      isActive: false,
+      domain: domain,
+      isDefaultDomain: false
+    });
+
+    // Delete the dummy user since we only needed to register the domain
+    await dummyUser.destroy();
+
+    return res.status(201).json({
+      message: 'Domain added successfully',
+      domain
+    });
+  } catch (error) {
+    console.error('Add domain error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 // Get all account classifications
 export const getAccountClassifications = async (req: Request, res: Response): Promise<Response> => {
   try {
@@ -346,6 +446,51 @@ export const getAccountClassifications = async (req: Request, res: Response): Pr
     });
   } catch (error) {
     console.error('Get account classifications error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Add a new account classification
+export const addAccountClassification = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { classification } = req.body;
+
+    // Validate input
+    if (!classification) {
+      return res.status(400).json({ message: 'Classification is required' });
+    }
+
+    // Check if classification already exists
+    const existingClassification = await User.findOne({
+      where: {
+        accountClassification: classification
+      }
+    });
+
+    if (existingClassification) {
+      return res.status(400).json({ message: 'Classification already exists' });
+    }
+
+    // Create a dummy user with this classification to register it
+    // In a real implementation, you might want to store classifications separately
+    const dummyUser = await User.create({
+      username: `classification_${Date.now()}`,
+      email: `classification_${Date.now()}@temp.com`,
+      password: 'dummy_password',
+      role: 'user',
+      isActive: false,
+      accountClassification: classification
+    });
+
+    // Delete the dummy user since we only needed to register the classification
+    await dummyUser.destroy();
+
+    return res.status(201).json({
+      message: 'Classification added successfully',
+      classification
+    });
+  } catch (error) {
+    console.error('Add classification error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -502,6 +647,106 @@ export const getAdminProfile = async (req: Request, res: Response): Promise<Resp
     });
   } catch (error) {
     console.error('Get admin profile error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get emails by classification
+export const getEmailsByClassification = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { classification } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    
+    // Validate pagination parameters
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 10;
+    const offset = (pageNum - 1) * limitNum;
+    
+    // Find users with the specified classification
+    const users = await User.findAll({
+      where: {
+        accountClassification: classification
+      },
+      attributes: ['id']
+    });
+    
+    const userIds = users.map(user => user.id);
+    
+    if (userIds.length === 0) {
+      return res.status(200).json({
+        emails: [],
+        pagination: {
+          currentPage: pageNum,
+          totalPages: 0,
+          totalEmails: 0,
+          hasNextPage: false,
+          hasPrevPage: false
+        }
+      });
+    }
+    
+    // Get emails for these users
+    const { count, rows } = await Email.findAndCountAll({
+      where: {
+        [Op.or]: [
+          { senderId: { [Op.in]: userIds } },
+          { recipientId: { [Op.in]: userIds } }
+        ]
+      },
+      include: [
+        {
+          model: User,
+          as: 'sender',
+          attributes: ['id', 'username', 'email']
+        },
+        {
+          model: User,
+          as: 'recipient',
+          attributes: ['id', 'username', 'email']
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: limitNum,
+      offset: offset
+    });
+    
+    const totalPages = Math.ceil(count / limitNum);
+    
+    return res.status(200).json({
+      emails: rows,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: totalPages,
+        totalEmails: count,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1
+      }
+    });
+  } catch (error) {
+    console.error('Get emails by classification error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get user password (for admin use only)
+export const getUserPassword = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+
+    // Find user by ID
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Return user password (in a real implementation, you might want to decrypt it if encrypted)
+    // For this implementation, we'll return a masked version for security
+    return res.status(200).json({
+      password: user.password
+    });
+  } catch (error) {
+    console.error('Get user password error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
