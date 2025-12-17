@@ -1,4 +1,4 @@
-import Imap from 'imap';
+import Pop3Client from 'pop3';
 import { simpleParser } from 'mailparser';
 import Email from '../models/Email';
 import User from '../models/User';
@@ -18,92 +18,74 @@ interface EmailConfig {
 }
 
 class EmailReceiver {
-  private imap: Imap;
+  private config: EmailConfig;
+  private pop3: any;
 
   constructor(config: EmailConfig) {
-    this.imap = new Imap({
-      user: config.user,
-      password: config.password,
-      host: config.host,
-      port: config.port,
-      tls: config.tls,
-      ...(config.tlsOptions && { tlsOptions: config.tlsOptions })
-    });
+    this.config = config;
   }
 
-  connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.imap.once('ready', () => {
-        console.log('IMAP connection established');
-        resolve();
+  async connect(): Promise<void> {
+    try {
+      this.pop3 = new Pop3Client({
+        hostname: this.config.host,
+        port: this.config.port,
+        tls: this.config.tls,
+        ...(this.config.tlsOptions && { tlsOptions: this.config.tlsOptions })
       });
-
-      this.imap.once('error', (err: Error) => {
-        console.error('IMAP connection error:', err);
-        reject(err);
-      });
-
-      this.imap.connect();
-    });
+      
+      await this.pop3.login(this.config.user, this.config.password);
+      console.log('POP3 connection established');
+    } catch (error) {
+      console.error('POP3 connection error:', error);
+      throw error;
+    }
   }
 
   disconnect(): void {
-    if (this.imap && this.imap.state !== 'disconnected') {
-      this.imap.end();
+    if (this.pop3) {
+      this.pop3.quit();
     }
   }
 
   async fetchUnreadEmails(userId: number): Promise<any[]> {
-    return new Promise((resolve, reject) => {
+    try {
       const emails: any[] = [];
-
-      this.imap.openBox('INBOX', false, (err: Error, box: any) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-
-        const fetch = this.imap.seq.fetch(`${box.messages.total}:*`, {
-          bodies: '',
-          struct: true
-        });
-
-        fetch.on('message', (msg: any, seqno: number) => {
-          msg.on('body', (stream: any, info: any) => {
-            let buffer = '';
-            stream.on('data', (chunk: any) => {
-              buffer += chunk.toString('utf8');
-            });
-
-            stream.once('end', async () => {
-              try {
-                const parsed = await simpleParser(buffer);
-                emails.push({
-                  userId,
-                  messageId: parsed.messageId || '',
-                  from: parsed.from?.text || '',
-                  subject: parsed.subject || '(No Subject)',
-                  body: parsed.text || parsed.html || '',
-                  date: parsed.date || new Date(),
-                });
-              } catch (parseErr) {
-                console.error('Error parsing email:', parseErr);
-              }
-            });
+      
+      // Get list of messages
+      const list = await this.pop3.list();
+      
+      // Process each message
+      for (const item of list) {
+        try {
+          // Retrieve message content
+          const message = await this.pop3.retrieve(item.number);
+          
+          // Parse the email
+          const parsed = await simpleParser(message);
+          
+          emails.push({
+            userId,
+            messageId: parsed.messageId || '',
+            from: parsed.from?.text || '',
+            subject: parsed.subject || '(No Subject)',
+            body: parsed.text || parsed.html || '',
+            date: parsed.date || new Date(),
           });
-        });
-
-        fetch.once('error', (err: Error) => {
-          console.error('Fetch error:', err);
-          reject(err);
-        });
-
-        fetch.once('end', () => {
-          console.log('Done fetching all messages!');
-          resolve(emails);
-        });
-      });
-    });
+          
+          // Mark message for deletion (POP3 behavior)
+          await this.pop3.delete(item.number);
+        } catch (parseErr) {
+          console.error('Error parsing email:', parseErr);
+        }
+      }
+      
+      console.log('Done fetching all messages!');
+      return emails;
+    } catch (error) {
+      console.error('Fetch error:', error);
+      throw error;
+    }
   }
 
   async saveEmailsToDatabase(emails: any[]): Promise<void> {
@@ -129,7 +111,7 @@ class EmailReceiver {
             folder: 'inbox',
             messageId: emailData.messageId,
             fromAddress: emailData.from,
-            toAddress: emailData.to,
+            // toAddress is not available in POP3
             receivedAt: emailData.date
           });
           console.log(`Saved email: ${emailData.subject}`);

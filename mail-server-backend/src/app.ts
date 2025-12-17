@@ -43,8 +43,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ message: 'Internal server error' });
 });
 
-// Import POP3 and IMAP servers
-
 // Sync database and start server
 const startServer = async () => {
   try {
@@ -92,20 +90,11 @@ const startServer = async () => {
 
     // Start POP3 server
     try {
-      const { startPop3Server } = await import('./mail-servers/pop3-server');
+      const { startPop3Server } = await import('./pop3-server');
       startPop3Server();
       console.log('POP3 server started');
     } catch (error) {
       console.error('Failed to start POP3 server:', error);
-    }
-
-    // Start IMAP server
-    try {
-      const { startImapServer } = await import('./mail-servers/imap-server');
-      startImapServer();
-      console.log('IMAP server started');
-    } catch (error) {
-      console.error('Failed to start IMAP server:', error);
     }
   } catch (error) {
     console.error('Unable to start server:', error);

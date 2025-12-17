@@ -9,11 +9,11 @@ interface UserAttributes {
   password: string;
   role: 'admin' | 'user';
   isActive: boolean;
-  imapHost?: string;
-  imapPort?: number;
-  imapUser?: string;
-  imapPassword?: string;
-  imapTLS?: boolean;
+  pop3Host?: string;
+  pop3Port?: number;
+  pop3User?: string;
+  pop3Password?: string;
+  pop3TLS?: boolean;
 }
 
 // Define the creation attributes (id and isActive are optional)
@@ -27,11 +27,11 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public password!: string;
   public role!: 'admin' | 'user';
   public isActive!: boolean;
-  public imapHost!: string | undefined;
-  public imapPort!: number | undefined;
-  public imapUser!: string | undefined;
-  public imapPassword!: string | undefined;
-  public imapTLS!: boolean | undefined;
+  public pop3Host!: string | undefined;
+  public pop3Port!: number | undefined;
+  public pop3User!: string | undefined;
+  public pop3Password!: string | undefined;
+  public pop3TLS!: boolean | undefined;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -71,23 +71,23 @@ User.init(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    imapHost: {
+    pop3Host: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    imapPort: {
+    pop3Port: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    imapUser: {
+    pop3User: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    imapPassword: {
+    pop3Password: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    imapTLS: {
+    pop3TLS: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },

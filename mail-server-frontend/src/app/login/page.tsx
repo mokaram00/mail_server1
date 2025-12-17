@@ -107,7 +107,7 @@ export default function Login() {
             </form>
           </div>
           <div className="items-center p-6 pt-0 flex justify-center animate-fadeIn delay-200">
-            <p className="text-sm text-foreground">Secure IMAP Email Client</p>
+            <p className="text-sm text-foreground">Secure POP3 Email Client</p>
           </div>
         </div>
       </div>

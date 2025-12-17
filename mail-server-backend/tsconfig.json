@@ -17,6 +17,7 @@
     "removeComments": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "allowJs": true,
     "strictFunctionTypes": true,
     "noImplicitThis": true,
     "noImplicitReturns": true,

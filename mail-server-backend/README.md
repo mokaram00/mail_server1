@@ -1,10 +1,10 @@
 # Mail Server Backend
 
-This is the backend for a mail server that receives emails (POP3/IMAP) without sending capabilities. It works with your own domain to receive emails on your private server.
+This is the backend for a mail server that receives emails via POP3 protocol without sending capabilities. It works with your own domain to receive emails on your private server.
 
 ## Features
 
-- Receive emails via IMAP/POP3 protocols
+- Receive emails via POP3 protocol
 - No email sending capabilities (receiving only)
 - Custom domain support
 - User authentication and management
@@ -16,7 +16,7 @@ This is the backend for a mail server that receives emails (POP3/IMAP) without s
 - Node.js (v14 or higher)
 - npm or yarn
 - A custom domain with DNS configuration
-- Access to IMAP/POP3 email accounts
+- Access to POP3 email accounts
 
 ## Setup Instructions
 
@@ -31,18 +31,9 @@ This is the backend for a mail server that receives emails (POP3/IMAP) without s
    - Set up MX records to point to your server
    - Configure SPF, DKIM, and DMARC records for proper email handling
 
-### 2. IMAP/POP3 Configuration
+### 2. POP3 Configuration
 
-Update the `.env` file with your IMAP settings:
-```
-IMAP_HOST=imap.your-domain.com
-IMAP_PORT=993
-IMAP_USER=your-email@your-domain.com
-IMAP_PASSWORD=your-password
-IMAP_TLS=true
-```
-
-Or for POP3:
+Update the `.env` file with your POP3 settings:
 ```
 POP3_HOST=pop.your-domain.com
 POP3_PORT=995
@@ -84,13 +75,13 @@ npm start
 - `PUT /api/emails/:id` - Update email (mark as read, star, etc.)
 
 ### Email Receiving
-- `POST /api/email-receive/receive` - Fetch emails from IMAP/POP3 server
-- `POST /api/email-receive/configure` - Configure IMAP/POP3 settings
+- `POST /api/email-receive/receive` - Fetch emails from POP3 server
+- `POST /api/email-receive/configure` - Configure POP3 settings
 
 ## How It Works
 
 1. Users register and log in to the system
-2. Users configure their email account settings (IMAP/POP3)
+2. Users configure their email account settings (POP3)
 3. The server periodically fetches emails from the configured email server
 4. Received emails are stored in the database
 5. Users can access their received emails through the API
@@ -100,7 +91,7 @@ npm start
 - Emails are only received, not sent
 - All passwords are hashed and stored securely
 - JWT tokens are used for authentication
-- TLS encryption is used for IMAP/POP3 connections
+- TLS encryption is used for POP3 connections
 
 ## Custom Domain Setup
 
@@ -116,5 +107,5 @@ To use your own domain:
 ## Limitations
 
 - This server only receives emails, it does not send them
-- Requires an existing email provider with IMAP/POP3 access
+- Requires an existing email provider with POP3 access
 - Not a full MTA (Mail Transfer Agent) replacement
