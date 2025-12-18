@@ -43,25 +43,56 @@ const server = new SMTPServer({
         const subject = parsed.subject || '(No subject)';
         const body = parsed.text || parsed.html || '';
 
+        // Try to find the sender user in the database
+        let senderUser = null;
+        const senderEmail = parsed.from?.value?.[0]?.address;
+        if (senderEmail) {
+          try {
+            senderUser = await User.findOne({ email: senderEmail });
+          } catch (err) {
+            console.error('Error finding sender user:', err);
+          }
+        }
+
         for (const user of session.recipients || []) {
           // Add logging for incoming messages
           console.log(`New mail for ${user.email} from ${from} with subject: ${subject}`);
           
-          await Email.create({
-            recipientId: user._id,
-            fromAddress: from,
-            toAddress: user.email,
-            subject,
-            body,
-            isRead: false,
-            receivedAt: new Date(),
-            messageId: parsed.messageId
-          });
+          try {
+            // Create email object with all required fields
+            const emailData = {
+              recipientId: user._id,
+              subject: subject,
+              body: body,
+              isRead: false,
+              folder: 'inbox',
+              fromAddress: from,
+              toAddress: user.email,
+              receivedAt: new Date(),
+              messageId: parsed.messageId
+            };
+
+            // Add senderId if sender user exists, otherwise use recipientId as fallback
+            if (senderUser) {
+              emailData.senderId = senderUser._id;
+            } else {
+              // Use recipientId as senderId as fallback to satisfy the required field
+              emailData.senderId = user._id;
+            }
+
+            await Email.create(emailData);
+            console.log(`Email saved to database for ${user.email}`);
+          } catch (err) {
+            console.error(`Failed to save email for ${user.email}:`, err);
+          }
         }
 
         cb();
       })
-      .catch(err => cb(err));
+      .catch(err => {
+        console.error('Error parsing email:', err);
+        cb(err);
+      });
   }
 });
 

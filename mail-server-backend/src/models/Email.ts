@@ -9,7 +9,7 @@ export interface IEmail extends Document {
   body: string;
   isRead: boolean;
   isStarred: boolean;
-  folder: 'inbox' | 'sent' | 'drafts' | 'trash';
+  folder: 'inbox';  // Only 'inbox' allowed
   messageId?: string;
   fromAddress?: string;
   toAddress?: string;
@@ -49,8 +49,7 @@ const EmailSchema: Schema<IEmail> = new Schema({
   },
   folder: {
     type: String,
-    enum: ['inbox', 'sent', 'drafts', 'trash'],
-    default: 'inbox'
+    default: 'inbox'  // Only 'inbox' as the default folder
   },
   messageId: {
     type: String,

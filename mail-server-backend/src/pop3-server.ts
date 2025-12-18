@@ -43,7 +43,7 @@ export const startPop3Server = () => {
           }
 
           // Check password using bcrypt
-          const isPasswordValid = await bcrypt.compare(auth.password, user.pop3Password);
+          const isPasswordValid = await bcrypt.compare(auth.password, user.password);
           if (!isPasswordValid) {
             return callback(new Error('Invalid username or password'));
           }

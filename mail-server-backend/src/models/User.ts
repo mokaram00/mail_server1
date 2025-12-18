@@ -9,13 +9,7 @@ export interface IUser extends Document {
   role: 'admin' | 'user';
   isActive: boolean;
   domain?: string;
-  isDefaultDomain?: boolean;
   accountClassification?: string;
-  pop3Host?: string;
-  pop3Port?: number;
-  pop3User?: string;
-  pop3Password?: string;
-  pop3TLS?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,31 +52,9 @@ const UserSchema: Schema<IUser> = new Schema({
     type: String,
     trim: true
   },
-  isDefaultDomain: {
-    type: Boolean,
-    default: false
-  },
   accountClassification: {
     type: String,
     trim: true
-  },
-  pop3Host: {
-    type: String,
-    trim: true
-  },
-  pop3Port: {
-    type: Number
-  },
-  pop3User: {
-    type: String,
-    trim: true
-  },
-  pop3Password: {
-    type: String
-  },
-  pop3TLS: {
-    type: Boolean,
-    default: true
   }
 }, {
   timestamps: true // Automatically adds createdAt and updatedAt fields

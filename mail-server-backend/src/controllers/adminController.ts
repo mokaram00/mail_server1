@@ -377,7 +377,6 @@ export const createUser = async (req: AdminAuthRequest, res: Response): Promise<
       role: user.role,
       isActive: user.isActive,
       domain: user.domain,
-      isDefaultDomain: user.isDefaultDomain,
       accountClassification: user.accountClassification,
     };
 
