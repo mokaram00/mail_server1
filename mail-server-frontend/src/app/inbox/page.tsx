@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '../components/ThemeToggle';
 import apiClient from '../components/apiClient';
 import useWebSocket from '../components/useWebSocket';
+import EmailList from '../components/EmailList';
+import EmailDetail from '../components/EmailDetail';
 
 interface Email {
   _id: string;
@@ -31,6 +33,7 @@ export default function Inbox() {
   const [userId, setUserId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Email[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const router = useRouter();
   
@@ -258,41 +261,11 @@ export default function Inbox() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6">
-        {selectedEmail ? (
-          /* Email Detail View */
-          <div className="bg-card rounded-xl border border-foreground shadow-lg p-6 animate-fadeInSlideUp">
-            <div className="mb-4">
-              <button 
-                onClick={handleBackToInbox}
-                className="flex items-center text-foreground hover:text-muted mb-4 transition-colors duration-200"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Inbox
-              </button>
-              
-              <h1 className="text-2xl font-bold text-foreground mb-2 animate-fadeIn">{selectedEmail.subject}</h1>
-              
-              <div className="flex items-center justify-between border-b border-foreground pb-4 mb-4 animate-fadeInSlideDown">
-                <div>
-                  <div className="font-medium text-foreground">{selectedEmail.fromAddress || 'Unknown Sender'}</div>
-                  <div className="text-sm text-foreground">
-                    to {selectedEmail.toAddress || 'me'} • {new Date(selectedEmail.createdAt).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="text-foreground whitespace-pre-wrap animate-fadeInSlideUp">
-                {selectedEmail.body}
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* Email List View */
-          <>
-            <div className="mb-6 animate-fadeInSlideDown">
+      <main className="flex-1 flex">
+        {/* Email List Section */}
+        <div className={`${selectedEmail ? 'w-1/3' : 'w-full'} border-r border-foreground flex flex-col`}>
+          <div className="flex-1 flex flex-col">
+            <div className="mb-6 p-4 border-b border-foreground">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">Inbox</h2>
@@ -304,49 +277,43 @@ export default function Inbox() {
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Email List */}
-            <div className="bg-card rounded-xl border border-foreground shadow-lg overflow-hidden animate-fadeInSlideUp">
-              {emails.length === 0 ? (
-                <div className="p-8 text-center text-foreground animate-fadeIn">
-                  <p>No emails found in your inbox.</p>
+              {/* Search Bar */}
+              <div className="mt-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search emails..."
+                    className="w-full px-4 py-2 bg-background border border-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <svg 
+                    className="absolute right-3 top-2.5 h-5 w-5 text-foreground/50" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
-              ) : (
-                <ul className="divide-y divide-foreground">
-                  {emails.map((email, index) => (
-                    <li 
-                      key={email._id} 
-                      className={`p-4 hover:bg-muted cursor-pointer transition-all duration-200 ${
-                        !email.isRead ? 'bg-foreground/5 border-l-4 border-foreground' : ''
-                      } animate-fadeInSlideRight`}
-                      style={{ animationDelay: `${index * 50}ms` }}
-                      onClick={() => handleEmailSelect(email)}
-                    >
-                      <div className="flex items-start">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className={`text-sm font-medium truncate ${email.isRead ? 'text-foreground' : 'text-foreground font-bold'}`}>
-                              {email.fromAddress || 'Unknown Sender'}
-                            </p>
-                            <p className="text-sm text-foreground whitespace-nowrap ml-2">
-                              {new Date(email.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <p className={`text-sm font-medium truncate mt-1 ${email.isRead ? 'text-foreground' : 'text-foreground font-bold'}`}>
-                            {email.subject}
-                          </p>
-                          <p className="text-sm text-foreground truncate mt-1">
-                            {email.body.substring(0, 120)}...
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              </div>
             </div>
-          </>
+            <EmailList 
+              emails={emails} 
+              onSelectEmail={handleEmailSelect} 
+              searchTerm={searchTerm}
+            />
+          </div>
+        </div>
+        
+        {/* Email Detail Section */}
+        {selectedEmail && (
+          <div className="w-2/3 flex flex-col">
+            <EmailDetail 
+              email={selectedEmail} 
+              onBack={handleBackToInbox} 
+            />
+          </div>
         )}
       </main>
     </div>
