@@ -43,7 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/emails', realTimeEmailRoutes);
-app.use('/api/magic', magicLinkRoutes);
+app.use('/api/magic-link', magicLinkRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -30,6 +30,9 @@ export default function UsersManagement() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showMagicLinkModal, setShowMagicLinkModal] = useState(false);
+  const [selectedUserForMagicLink, setSelectedUserForMagicLink] = useState<User | null>(null);
+  const [magicLink, setMagicLink] = useState<string>('');
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
@@ -242,9 +245,10 @@ export default function UsersManagement() {
       const data = await response.json();
       console.log('Magic link generated:', data);
       
-      // In a real application, you would send this link via email
-      // For now, we'll show it in a toast
-      (window as any).addToast(`Magic link generated for ${user.email}. In a real app, this would be emailed to the user.`, 'success');
+      // Set the magic link in state and show the modal
+      setMagicLink(data.magicLink);
+      setSelectedUserForMagicLink(user);
+      setShowMagicLinkModal(true);
     } catch (err: any) {
       (window as any).addToast(`Failed to generate magic link: ${err.message}`, 'error');
       console.error('Error generating magic link:', err);
@@ -362,6 +366,43 @@ export default function UsersManagement() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Magic Link Modal */}
+      <Modal
+        isOpen={showMagicLinkModal}
+        onClose={() => setShowMagicLinkModal(false)}
+        title={`Magic Link for ${selectedUserForMagicLink?.username}`}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-foreground/80">
+            A magic link has been generated for <strong>{selectedUserForMagicLink?.email}</strong>. 
+            Copy the link below and send it to the user. The link will expire in 1 year.
+          </p>
+          
+          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+            <p className="text-foreground font-mono break-all">{magicLink}</p>
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(magicLink);
+                (window as any).addToast('Magic link copied to clipboard', 'success');
+              }}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200"
+            >
+              Copy Link
+            </button>
+            <button
+              onClick={() => setShowMagicLinkModal(false)}
+              className="px-4 py-2 bg-card border border-border rounded-lg hover:bg-accent transition-all duration-200 text-foreground"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </Modal>
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fadeInSlideDown">
