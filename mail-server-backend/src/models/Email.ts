@@ -1,12 +1,10 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/db';
-import User from './User';
+import mongoose, { Document, Schema, Model } from 'mongoose';
+import { userConnection } from '../config/mongoDb'; // Use user connection like User model
 
-// Define the attributes for the Email model
-interface EmailAttributes {
-  id: number;
-  senderId: number;
-  recipientId: number;
+// Define the interface for Email document
+export interface IEmail extends Document {
+  senderId: mongoose.Types.ObjectId;
+  recipientId: mongoose.Types.ObjectId;
   subject: string;
   body: string;
   isRead: boolean;
@@ -16,103 +14,64 @@ interface EmailAttributes {
   fromAddress?: string;
   toAddress?: string;
   receivedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// Define the creation attributes (id is auto-generated)
-interface EmailCreationAttributes extends Optional<EmailAttributes, 'id'> {}
-
-// Define the Email model class
-class Email extends Model<EmailAttributes, EmailCreationAttributes> implements EmailAttributes {
-  public id!: number;
-  public senderId!: number;
-  public recipientId!: number;
-  public subject!: string;
-  public body!: string;
-  public isRead!: boolean;
-  public isStarred!: boolean;
-  public folder!: 'inbox' | 'sent' | 'drafts' | 'trash';
-  public messageId!: string | undefined;
-  public fromAddress!: string | undefined;
-  public toAddress!: string | undefined;
-  public receivedAt!: Date | undefined;
-
-  // Timestamps
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
-}
-
-// Initialize the Email model
-Email.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    senderId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: User,
-        key: 'id',
-      },
-    },
-    recipientId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: User,
-        key: 'id',
-      },
-    },
-    subject: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    body: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-    },
-    isRead: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    isStarred: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    folder: {
-      type: DataTypes.ENUM('inbox', 'sent', 'drafts', 'trash'),
-      defaultValue: 'inbox',
-    },
-    messageId: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    fromAddress: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    toAddress: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    receivedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
+// Define the Email schema
+const EmailSchema: Schema<IEmail> = new Schema({
+  senderId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  {
-    sequelize,
-    tableName: 'emails',
-    timestamps: true,
+  recipientId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  subject: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  body: {
+    type: String,
+    required: true
+  },
+  isRead: {
+    type: Boolean,
+    default: false
+  },
+  isStarred: {
+    type: Boolean,
+    default: false
+  },
+  folder: {
+    type: String,
+    enum: ['inbox', 'sent', 'drafts', 'trash'],
+    default: 'inbox'
+  },
+  messageId: {
+    type: String,
+    trim: true
+  },
+  fromAddress: {
+    type: String,
+    trim: true
+  },
+  toAddress: {
+    type: String,
+    trim: true
+  },
+  receivedAt: {
+    type: Date
   }
-);
+}, {
+  timestamps: true // Automatically adds createdAt and updatedAt fields
+});
 
-// Define associations
-User.hasMany(Email, { foreignKey: 'senderId', as: 'sentEmails' });
-User.hasMany(Email, { foreignKey: 'recipientId', as: 'receivedEmails' });
-Email.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
-Email.belongsTo(User, { foreignKey: 'recipientId', as: 'recipient' });
+// Create and export the Email model using user connection
+const Email: Model<IEmail> = userConnection.model<IEmail>('Email', EmailSchema);
 
 export default Email;

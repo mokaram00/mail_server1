@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiClient } from '../../utils/apiClient';
 
 interface User {
   id: number;
@@ -21,7 +22,6 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
   
   // Profile form state
@@ -39,39 +39,25 @@ export default function AdminSettings() {
   
   const router = useRouter();
 
-  // Check if user is authenticated and is admin
+  // Fetch admin profile
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (!storedToken) {
-      router.push('/login');
-      return;
-    }
-    
-    setToken(storedToken);
-    
-    // Fetch admin profile
-    fetchAdminProfile(storedToken);
-  }, [router]);
+    fetchAdminProfile();
+  }, []);
 
-  const fetchAdminProfile = async (authToken: string) => {
+  const fetchAdminProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/profile`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin-auth/profile`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch profile');
       }
       
       const data = await response.json();
-      setCurrentUser(data.user);
+      setCurrentUser(data.admin);
       setProfileForm({
-        username: data.user.username,
-        email: data.user.email
+        username: data.admin.username,
+        email: data.admin.email
       });
     } catch (err) {
       setError('Failed to load profile');
@@ -83,20 +69,12 @@ export default function AdminSettings() {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
     
     try {
       setError(null);
       setSuccess(null);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/profile`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(profileForm),
-      });
+      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin-auth/profile`, profileForm);
       
       const data = await response.json();
       
@@ -104,23 +82,17 @@ export default function AdminSettings() {
         throw new Error(data.message || 'Failed to update profile');
       }
       
-      setSuccess('Profile updated successfully');
-      setCurrentUser(data.user);
-      
-      // Update user in localStorage
-      localStorage.setItem('user', JSON.stringify({
-        username: data.user.username,
-        email: data.user.email
-      }));
+      // Use toast notification instead of inline message
+      (window as any).addToast('Profile updated successfully', 'success');
+      setCurrentUser(data.admin);
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+      (window as any).addToast(err.message || 'Failed to update profile', 'error');
       console.error(err);
     }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
     
     try {
       setError(null);
@@ -135,16 +107,9 @@ export default function AdminSettings() {
         throw new Error('Password must be at least 6 characters long');
       }
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/profile/password`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword
-        }),
+      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin-auth/profile/password`, {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
       });
       
       const data = await response.json();
@@ -153,14 +118,15 @@ export default function AdminSettings() {
         throw new Error(data.message || 'Failed to change password');
       }
       
-      setSuccess('Password changed successfully');
+      // Use toast notification instead of inline message
+      (window as any).addToast('Password changed successfully', 'success');
       setPasswordForm({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to change password');
+      (window as any).addToast(err.message || 'Failed to change password', 'error');
       console.error(err);
     }
   };
@@ -174,31 +140,19 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-500">
-          {error}
-        </div>
-      )}
-      
-      {success && (
-        <div className="p-4 bg-green-500/20 border border-green-500 rounded-lg text-green-500">
-          {success}
-        </div>
-      )}
-
-      <div>
-        <h1 className="text-3xl font-bold">Admin Settings</h1>
+    <div className="space-y-6 animate-fadeIn">
+      <div className="animate-fadeInSlideDown">
+        <h1 className="text-2xl font-bold">Admin Settings</h1>
         <p className="text-foreground/70">Manage your admin profile and security settings</p>
       </div>
 
-      <div className="bg-card border border-foreground/20 rounded-xl shadow-sm">
+      <div className="bg-card border border-border rounded-xl shadow-sm animate-fadeInSlideUp delay-100">
         {/* Tabs */}
-        <div className="border-b border-foreground/20">
+        <div className="border-b border-border">
           <nav className="flex">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`px-6 py-4 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'profile'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-foreground/60 hover:text-foreground'
@@ -208,7 +162,7 @@ export default function AdminSettings() {
             </button>
             <button
               onClick={() => setActiveTab('password')}
-              className={`px-6 py-4 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'password'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-foreground/60 hover:text-foreground'
@@ -219,42 +173,42 @@ export default function AdminSettings() {
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-5">
           {/* Profile Tab */}
           {activeTab === 'profile' && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold">Profile Information</h2>
-                <p className="text-foreground/70">Update your personal information</p>
+                <h2 className="text-lg font-semibold">Profile Information</h2>
+                <p className="text-foreground/70 text-sm">Update your personal information</p>
               </div>
               
-              <form onSubmit={handleProfileUpdate} className="space-y-4 max-w-xl">
+              <form onSubmit={handleProfileUpdate} className="space-y-4 max-w-lg">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Username</label>
+                  <label className="block text-sm font-medium mb-1 text-foreground/80">Username</label>
                   <input
                     type="text"
                     value={profileForm.username}
                     onChange={(e) => setProfileForm({...profileForm, username: e.target.value})}
-                    className="w-full px-3 py-2 border border-foreground/20 rounded-lg bg-background"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground transition-all duration-200 text-sm"
                     required
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <label className="block text-sm font-medium mb-1 text-foreground/80">Email</label>
                   <input
                     type="email"
                     value={profileForm.email}
                     onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-foreground/20 rounded-lg bg-background"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground transition-all duration-200 text-sm"
                     required
                   />
                 </div>
                 
-                <div className="pt-4">
+                <div className="pt-3">
                   <button 
                     type="submit"
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 text-sm"
                   >
                     Update Profile
                   </button>
@@ -265,51 +219,51 @@ export default function AdminSettings() {
 
           {/* Password Tab */}
           {activeTab === 'password' && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold">Change Password</h2>
-                <p className="text-foreground/70">Update your password to keep your account secure</p>
+                <h2 className="text-lg font-semibold">Change Password</h2>
+                <p className="text-foreground/70 text-sm">Update your password to keep your account secure</p>
               </div>
               
-              <form onSubmit={handlePasswordChange} className="space-y-4 max-w-xl">
+              <form onSubmit={handlePasswordChange} className="space-y-4 max-w-lg">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Current Password</label>
+                  <label className="block text-sm font-medium mb-1 text-foreground/80">Current Password</label>
                   <input
                     type="password"
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
-                    className="w-full px-3 py-2 border border-foreground/20 rounded-lg bg-background"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground transition-all duration-200 text-sm"
                     required
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">New Password</label>
+                  <label className="block text-sm font-medium mb-1 text-foreground/80">New Password</label>
                   <input
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                    className="w-full px-3 py-2 border border-foreground/20 rounded-lg bg-background"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground transition-all duration-200 text-sm"
                     required
                   />
-                  <p className="text-xs text-foreground/60 mt-1">Must be at least 6 characters long</p>
+                  <p className="text-xs text-foreground/70 mt-1">Must be at least 6 characters long</p>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+                  <label className="block text-sm font-medium mb-1 text-foreground/80">Confirm New Password</label>
                   <input
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                    className="w-full px-3 py-2 border border-foreground/20 rounded-lg bg-background"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground transition-all duration-200 text-sm"
                     required
                   />
                 </div>
                 
-                <div className="pt-4">
+                <div className="pt-3">
                   <button 
                     type="submit"
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 text-sm"
                   >
                     Change Password
                   </button>

@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiClient } from '../../utils/apiClient';
+import Modal from '../../components/Modal';
 
 interface User {
-  id: number;
+  _id: number | string ;
   username: string;
   email: string;
   role: string;
@@ -32,7 +34,6 @@ export default function UsersManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showBulkCreateForm, setShowBulkCreateForm] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -48,38 +49,23 @@ export default function UsersManagement() {
   const [selectedClassification, setSelectedClassification] = useState<string>('all');
   const router = useRouter();
 
-  // Check if user is authenticated and is admin
+  // Removed local event listener as we're using global modals now
+
+  // Fetch users, domains and classifications
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (!storedToken) {
-      router.push('/login');
-      return;
-    }
-    
-    setToken(storedToken);
-    
-    // Fetch users, domains and classifications
-    fetchUsers(storedToken);
-    fetchDomains(storedToken);
-    fetchClassifications(storedToken);
-  }, [router]);
+    fetchUsers();
+    fetchDomains();
+    fetchClassifications();
+  }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
     
     try {
       setError(null);
       setSuccess(null);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newUser),
-      });
+      const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`, newUser);
       
       const data = await response.json();
       
@@ -87,21 +73,21 @@ export default function UsersManagement() {
         throw new Error(data.message || 'Failed to create user');
       }
       
-      setSuccess('User created successfully');
+      // Use toast notification instead of inline message
+      (window as any).addToast('User created successfully', 'success');
       setNewUser({ username: '', password: '', role: 'user', domain: '', isDefaultDomain: false, accountClassification: '' });
       setShowCreateForm(false);
       
       // Refresh users list
-      fetchUsers(token);
+      fetchUsers();
     } catch (err: any) {
-      setError(err.message || 'Failed to create user');
+      (window as any).addToast(err.message || 'Failed to create user', 'error');
       console.error(err);
     }
   };
 
   const handleBulkCreateUsers = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
     
     try {
       setError(null);
@@ -115,14 +101,7 @@ export default function UsersManagement() {
           return { username, password, role, domain, accountClassification };
         });
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/bulk`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ users: usersArray }),
-      });
+      const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/bulk`, { users: usersArray });
       
       const data = await response.json();
       
@@ -130,50 +109,53 @@ export default function UsersManagement() {
         throw new Error(data.message || 'Failed to create users');
       }
       
-      setSuccess(`Successfully created ${data.users.length} users`);
+      (window as any).addToast(`Successfully created ${data.users.length} users`, 'success');
       setBulkUsers('');
       setShowBulkCreateForm(false);
       
       // Refresh users list
-      fetchUsers(token);
+      fetchUsers();
     } catch (err: any) {
-      setError(err.message || 'Failed to create users');
+      (window as any).addToast(err.message || 'Failed to create users', 'error');
       console.error(err);
     }
   };
 
-  const fetchUsers = async (authToken: string) => {
+  const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
       
       const data = await response.json();
-      setUsers(data.users);
+      console.log('Users data received:', data.users);
+      
+      // Check what ID fields are available
+      data.users.forEach((user: any) => {
+        console.log('User object keys:', Object.keys(user));
+        console.log('User _id:', user._id, typeof user._id);
+      });
+      
+      // Map users to ensure they have the correct id field
+      const mappedUsers = data.users.map((user: any) => ({
+        ...user,
+            }));
+      
+      setUsers(mappedUsers);
     } catch (err) {
-      setError('Failed to load users');
-      console.error(err);
+      (window as any).addToast('Failed to load users', 'error');
+      console.error('Error fetching users:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchDomains = async (authToken: string) => {
+  const fetchDomains = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/domains`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/domains`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch domains');
@@ -186,38 +168,31 @@ export default function UsersManagement() {
     }
   };
 
-  const fetchClassifications = async (authToken: string) => {
+  const fetchClassifications = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/classifications`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/classifications`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch classifications');
       }
       
       const data = await response.json();
-      setClassifications(data.classifications);
+      setClassifications(data.classifications.map((c: any) => c.classification));
     } catch (err) {
       console.error('Failed to load classifications', err);
     }
   };
 
-  const updateUserRole = async (userId: number, newRole: string) => {
-    if (!token) return;
+  const updateUserRole = async (userId: number | string, newRole: string) => {
+    // Debug: Check if userId is valid
+    console.log('Updating user role for ID:', userId);
+    if (!userId) {
+      (window as any).addToast('Invalid user ID', 'error');
+      return;
+    }
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
+      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/role`, { role: newRole });
       
       if (!response.ok) {
         throw new Error('Failed to update user role');
@@ -226,26 +201,26 @@ export default function UsersManagement() {
       const data = await response.json();
       // Update user in state
       setUsers(users.map(user => 
-        user.id === userId ? { ...user, role: data.user.role } : user
+        user._id === userId ? { ...user, role: data.user.role } : user
       ));
+      
+      (window as any).addToast('User role updated successfully', 'success');
     } catch (err) {
-      setError('Failed to update user role');
-      console.error(err);
+      (window as any).addToast('Failed to update user role', 'error');
+      console.error('Error updating user role:', err);
     }
   };
 
-  const updateUserClassification = async (userId: number, newClassification: string) => {
-    if (!token) return;
+  const updateUserClassification = async (userId: number | string, newClassification: string) => {
+    // Debug: Check if userId is valid
+    console.log('Updating user classification for ID:', userId);
+    if (!userId) {
+      (window as any).addToast('Invalid user ID', 'error');
+      return;
+    }
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/classification`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ classification: newClassification || null }),
-      });
+      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/classification`, { classification: newClassification || null });
       
       if (!response.ok) {
         throw new Error('Failed to update user classification');
@@ -254,28 +229,29 @@ export default function UsersManagement() {
       const data = await response.json();
       // Update user in state
       setUsers(users.map(user => 
-        user.id === userId ? { ...user, accountClassification: data.user.accountClassification } : user
+        user._id === userId ? { ...user, accountClassification: data.user.accountClassification } : user
       ));
       
       // Refresh user counts by classification
-      fetchClassifications(token);
+      fetchClassifications();
+      
+      (window as any).addToast('User classification updated successfully', 'success');
     } catch (err) {
-      setError('Failed to update user classification');
-      console.error(err);
+      (window as any).addToast('Failed to update user classification', 'error');
+      console.error('Error updating user classification:', err);
     }
   };
 
-  const deactivateUser = async (userId: number) => {
-    if (!token) return;
+  const deactivateUser = async (userId: number | string) => {
+    // Debug: Check if userId is valid
+    console.log('Deactivating user ID:', userId);
+    if (!userId) {
+      (window as any).addToast('Invalid user ID', 'error');
+      return;
+    }
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/deactivate`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/deactivate`, {});
       
       if (!response.ok) {
         throw new Error('Failed to deactivate user');
@@ -284,25 +260,26 @@ export default function UsersManagement() {
       const data = await response.json();
       // Update user in state
       setUsers(users.map(user => 
-        user.id === userId ? { ...user, isActive: data.user.isActive } : user
+        user._id === userId ? { ...user, isActive: data.user.isActive } : user
       ));
+      
+      (window as any).addToast('User deactivated successfully', 'success');
     } catch (err) {
-      setError('Failed to deactivate user');
-      console.error(err);
+      (window as any).addToast('Failed to deactivate user', 'error');
+      console.error('Error deactivating user:', err);
     }
   };
 
-  const showUserPassword = async (userId: number) => {
-    if (!token) return;
+  const showUserPassword = async (userId: number | string) => {
+    // Debug: Check if userId is valid
+    console.log('Showing password for user ID:', userId);
+    if (!userId) {
+      (window as any).addToast('Invalid user ID', 'error');
+      return;
+    }
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/password`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/password`);
       
       if (!response.ok) {
         throw new Error('Failed to get user password');
@@ -313,10 +290,10 @@ export default function UsersManagement() {
       // Show the password to the admin
       alert(`Password for user: ${data.password}`);
       
-      setSuccess('Password retrieved successfully');
+      (window as any).addToast('Password retrieved successfully', 'success');
     } catch (err) {
-      setError('Failed to get user password');
-      console.error(err);
+      (window as any).addToast('Failed to get user password', 'error');
+      console.error('Error getting user password:', err);
     }
   };
 
@@ -336,107 +313,44 @@ export default function UsersManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {error && (
-        <div className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-500">
-          {error}
-        </div>
-      )}
-      
-      {success && (
-        <div className="mb-6 p-4 bg-green-500/20 border border-green-500 rounded-lg text-green-500">
-          {success}
-        </div>
-      )}
-
-      <h1 className="text-3xl font-bold mb-8">User Management</h1>
-
-      {/* Filters */}
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <div className="flex items-center">
-          <label className="mr-2">Filter by Domain:</label>
-          <select
-            value={selectedDomain}
-            onChange={(e) => setSelectedDomain(e.target.value)}
-            className="px-3 py-2 border border-foreground/20 rounded bg-background"
-          >
-            <option value="all">All Domains</option>
-            {domains.map((domain) => (
-              <option key={domain.domain} value={domain.domain}>
-                {domain.domain} {domain.isDefault ? '(Default)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="flex items-center">
-          <label className="mr-2">Filter by Classification:</label>
-          <select
-            value={selectedClassification}
-            onChange={(e) => setSelectedClassification(e.target.value)}
-            className="px-3 py-2 border border-foreground/20 rounded bg-background"
-          >
-            <option value="all">All Classifications</option>
-            {classifications.map((classification) => (
-              <option key={classification} value={classification}>
-                {classification}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="mb-6 flex flex-wrap gap-3">
-        <button 
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
-        >
-          {showCreateForm ? 'Cancel' : 'Create New User'}
-        </button>
-        
-        <button 
-          onClick={() => setShowBulkCreateForm(!showBulkCreateForm)}
-          className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
-        >
-          {showBulkCreateForm ? 'Cancel' : 'Bulk Create Users'}
-        </button>
-      </div>
-
-      {/* Create User Form */}
-      {showCreateForm && (
-        <div className="mb-8 bg-card border border-foreground/20 rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">Create New User</h2>
-          
-          <form onSubmit={handleCreateUser} className="space-y-4">
+    <div className="space-y-6 animate-fadeIn">
+      {/* Create User Modal */}
+      <Modal
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        title="Create New User"
+        size="lg"
+      >
+        <form onSubmit={handleCreateUser} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Username</label>
+              <label className="block text-sm font-medium text-foreground/80 mb-1">Username</label>
               <input
                 type="text"
                 value={newUser.username}
                 onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
+              <label className="block text-sm font-medium text-foreground/80 mb-1">Password</label>
               <input
                 type="password"
                 value={newUser.password}
                 onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Role</label>
+              <label className="block text-sm font-medium text-foreground/80 mb-1">Role</label>
               <select
                 value={newUser.role}
                 onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -444,11 +358,11 @@ export default function UsersManagement() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Domain (optional)</label>
+              <label className="block text-sm font-medium text-foreground/80 mb-1">Domain (optional)</label>
               <select
                 value={newUser.domain}
                 onChange={(e) => setNewUser({...newUser, domain: e.target.value})}
-                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
               >
                 <option value="">Select a domain</option>
                 {domains.map((domain) => (
@@ -456,22 +370,21 @@ export default function UsersManagement() {
                     {domain.domain} {domain.isDefault ? '(Default)' : ''}
                   </option>
                 ))}
-                <option value="">Other (specify below)</option>
               </select>
               {newUser.domain && !domains.some(d => d.domain === newUser.domain) && (
-                <div className="mt-2 text-sm text-foreground/80">
-                  Will create new domain: <strong>{newUser.domain}</strong>
+                <div className="mt-2 text-sm text-destructive">
+                  Domain does not exist: <strong>{newUser.domain}</strong>
                 </div>
               )}
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Account Classification (optional)</label>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-foreground/80 mb-1">Account Classification (optional)</label>
               <div className="flex space-x-2">
                 <select
                   value={newUser.accountClassification || ''}
                   onChange={(e) => setNewUser({...newUser, accountClassification: e.target.value})}
-                  className="flex-1 px-3 py-2 border border-foreground/20 rounded bg-background"
+                  className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
                 >
                   <option value="">Select existing or create new</option>
                   {classifications.map((classification) => (
@@ -480,228 +393,260 @@ export default function UsersManagement() {
                     </option>
                   ))}
                 </select>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    const newClassification = prompt('Enter new classification name:');
-                    if (newClassification) {
-                      setNewUser({...newUser, accountClassification: newClassification});
-                    }
-                  }}
-                  className="px-3 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
-                >
-                  + New
-                </button>
               </div>
               {newUser.accountClassification && !classifications.includes(newUser.accountClassification) && (
-                <div className="mt-2 text-sm text-foreground/80">
-                  Will create new classification: <strong>{newUser.accountClassification}</strong>
+                <div className="mt-2 text-sm text-destructive">
+                  Classification does not exist: <strong>{newUser.accountClassification}</strong>
                 </div>
               )}
             </div>
-            <div className="flex space-x-3">
-              <button 
-                type="submit"
-                className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
-              >
-                Create User
-              </button>
-              <button 
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 border border-foreground/20 rounded-lg hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Bulk Create Users Form */}
-      {showBulkCreateForm && (
-        <div className="mb-8 bg-card border border-foreground/20 rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">Bulk Create Users</h2>
-          <p className="text-sm text-foreground/80 mb-4">
-            Enter one user per line in the format: username,email,password,role,domain,classification
-            <br />
-            Role, domain, and classification are optional (defaults to 'user', empty, and empty respectively)
-            <br />
-            Available domains: {domains.map(d => d.domain).join(', ')}
-          </p>
+          </div>
           
-          <form onSubmit={handleBulkCreateUsers} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Users Data</label>
-              <textarea
-                value={bulkUsers}
-                onChange={(e) => setBulkUsers(e.target.value)}
-                rows={10}
-                className="w-full px-3 py-2 border border-foreground/20 rounded bg-background font-mono text-sm"
-                placeholder="john,john@example.com,password123,user,example.com,rockstar&#10;jane,jane@test.com,password456,admin,test.com,vip"
-                required
-              />
-            </div>
-            
-            <div className="flex space-x-3">
-              <button 
-                type="submit"
-                className="px-4 py-2 bg-foreground text-background rounded-lg hover:bg-muted transition-colors"
-              >
-                Create Users
-              </button>
-              <button 
-                type="button"
-                onClick={() => setShowBulkCreateForm(false)}
-                className="px-4 py-2 border border-foreground/20 rounded-lg hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          <div className="flex space-x-3 pt-4">
+            <button 
+              type="submit"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 transform hover:scale-105"
+            >
+              Create User
+            </button>
+            <button 
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              className="px-4 py-2 bg-card border border-border rounded-lg hover:bg-accent transition-all duration-200 text-foreground transform hover:scale-105"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fadeInSlideDown">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+          <p className="text-foreground/70">Manage all users in the system</p>
         </div>
-      )}
+        <div className="flex gap-2 flex-wrap">
+          <button 
+            onClick={() => {
+              const event = new CustomEvent('openCreateUserModal');
+              window.dispatchEvent(event);
+            }}
+            className="px-4 py-2 bg-card border border-border rounded-lg hover:bg-accent transition-all duration-200 text-foreground transform hover:scale-105"
+          >
+            Create New User
+          </button>
+          <button 
+            onClick={() => {
+              const event = new CustomEvent('openCreateBulkUsersModal');
+              window.dispatchEvent(event);
+            }}
+            className="px-4 py-2 bg-card border border-border rounded-lg hover:bg-accent transition-all duration-200 text-foreground transform hover:scale-105"
+          >
+            Bulk Create Users
+          </button>
+          <button 
+            onClick={() => {
+              const event = new CustomEvent('openGenerateEmailsModal');
+              window.dispatchEvent(event);
+            }}
+            className="px-4 py-2 bg-card border border-border rounded-lg hover:bg-accent transition-all duration-200 text-foreground transform hover:scale-105"
+          >
+            Generate Email Accounts
+          </button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6 animate-fadeInSlideUp delay-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground/80 mb-1">Filter by Domain</label>
+            <select
+              value={selectedDomain}
+              onChange={(e) => setSelectedDomain(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
+            >
+              <option value="all">All Domains</option>
+              {domains.map((domain) => (
+                <option key={domain.domain} value={domain.domain}>
+                  {domain.domain} {domain.isDefault ? '(Default)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-foreground/80 mb-1">Filter by Classification</label>
+            <select
+              value={selectedClassification}
+              onChange={(e) => setSelectedClassification(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
+            >
+              <option value="all">All Classifications</option>
+              {classifications.map((classification) => (
+                <option key={classification} value={classification}>
+                  {classification}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
 
       {/* Users Table */}
-      <div className="bg-card border border-foreground/20 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-foreground/20">
-          <h2 className="text-xl font-semibold">Users List</h2>
-          <p className="text-sm text-foreground/80 mt-1">
-            Showing {filteredUsers.length} of {users.length} users
-          </p>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-foreground/20">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Username</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Domain</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Classification</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-foreground/20">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-muted/30">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium">{user.username}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-foreground/80">{user.username}@{user.domain}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-foreground/80">
-                      {user.domain || '-'}
-                      {user.isDefaultDomain && (
-                        <span className="ml-2 px-2 py-1 bg-blue-500/20 text-blue-500 text-xs rounded">
-                          Default
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <select
-                        value={user.accountClassification || ''}
-                        onChange={(e) => updateUserClassification(user.id, e.target.value)}
-                        className="bg-background border border-foreground/20 rounded px-2 py-1 text-sm"
-                      >
-                        <option value="">No Classification</option>
-                        {classifications.map((classification) => (
-                          <option key={classification} value={classification}>
-                            {classification}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      user.role === 'admin' 
-                        ? 'bg-blue-500/20 text-blue-500' 
-                        : 'bg-green-500/20 text-green-500'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      user.isActive 
-                        ? 'bg-green-500/20 text-green-500' 
-                        : 'bg-red-500/20 text-red-500'
-                    }`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex flex-wrap gap-2">
-                      <select
-                        value={user.role}
-                        onChange={(e) => updateUserRole(user.id, e.target.value)}
-                        className="bg-background border border-foreground/20 rounded px-2 py-1 text-sm"
-                      >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      
-                      {user.isActive ? (
-                        <button
-                          onClick={() => deactivateUser(user.id)}
-                          className="px-3 py-1 bg-red-500/20 text-red-500 rounded hover:bg-red-500/30 transition-colors"
-                        >
-                          Deactivate
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          className="px-3 py-1 bg-gray-500/20 text-gray-500 rounded cursor-not-allowed"
-                        >
-                          Inactive
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={() => {
-                          // Open email login for this user
-                          window.open(`/login?email=${encodeURIComponent(user.email)}`, '_blank');
-                        }}
-                        className="px-3 py-1 bg-purple-500/20 text-purple-500 rounded hover:bg-purple-500/30 transition-colors"
-                      >
-                        Login
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          // Open inbox for this user
-                          window.open(`/inbox?user=${user.id}`, '_blank');
-                        }}
-                        className="px-3 py-1 bg-indigo-500/20 text-indigo-500 rounded hover:bg-indigo-500/30 transition-colors"
-                      >
-                        Inbox
-                      </button>
-                      
-                      <button
-                        onClick={() => showUserPassword(user.id)}
-                        className="px-3 py-1 bg-yellow-500/20 text-yellow-500 rounded hover:bg-yellow-500/30 transition-colors"
-                      >
-                        Show Pass
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="bg-card rounded-xl shadow-sm border border-border animate-fadeInSlideUp delay-150">
+        <div className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <h2 className="text-lg font-semibold text-foreground">Users List</h2>
+            <p className="text-sm text-foreground/70">
+              Showing {filteredUsers.length} of {users.length} users
+            </p>
+          </div>
           
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-12 text-foreground/60">
-              No users found
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-accent">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Username</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Domain</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Classification</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-card divide-y divide-border">
+                {filteredUsers.map((user) => (
+                  <tr key={user._id} className="hover:bg-accent/50 transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-medium text-foreground"> {user.username}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-foreground/70">{user.username}@{user.domain}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-foreground/70">
+                        {user.domain || '-'}
+                        {user.isDefaultDomain && (
+                          <span className="ml-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={user.accountClassification || ''}
+                          onChange={(e) => {
+                            console.log('Classification change for user:', user._id, 'to:', e.target.value);
+                            updateUserClassification(user._id, e.target.value);
+                          }}
+                          className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                        >
+                          <option value="">No Classification</option>
+                          {classifications.map((classification) => (
+                            <option key={classification} value={classification}>
+                              {classification}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.role === 'admin' 
+                          ? 'bg-primary/10 text-primary' 
+                          : 'bg-green-500/10 text-green-500'
+                      }`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.isActive 
+                          ? 'bg-green-500/10 text-green-500' 
+                          : 'bg-destructive/10 text-destructive'
+                      }`}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex flex-wrap gap-2">
+                        <select
+                          value={user.role}
+                          onChange={(e) => {
+                            console.log('Role change for user:', user._id, 'to:', e.target.value);
+                            updateUserRole(user._id, e.target.value);
+                          }}
+                          className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        
+                        {user.isActive ? (
+                          <button
+                            onClick={() => {
+                              console.log('Deactivating user:', user._id);
+                              deactivateUser(user._id);
+                            }}
+                            className="px-3 py-1 bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-all duration-200 transform hover:scale-105"
+                          >
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="px-3 py-1 bg-border text-foreground/50 rounded cursor-not-allowed"
+                          >
+                            Inactive
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={() => {
+                            // Open email login for this user
+                            window.open(`/login?email=${encodeURIComponent(user.email)}`, '_blank');
+                          }}
+                          className="px-3 py-1 bg-purple-500/10 text-purple-500 rounded hover:bg-purple-500/20 transition-all duration-200 transform hover:scale-105"
+                        >
+                          Login
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            // Open inbox for this user
+                            window.open(`/inbox?user=${user._id}`, '_blank');
+                          }}
+                          className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded hover:bg-indigo-500/20 transition-all duration-200 transform hover:scale-105"
+                        >
+                          Inbox
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            console.log('Showing password for user:', user._id);
+                            showUserPassword(user._id);
+                          }}
+                          className="px-3 py-1 bg-yellow-500/10 text-yellow-500 rounded hover:bg-yellow-500/20 transition-all duration-200 transform hover:scale-105"
+                        >
+                          Show Pass
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            {filteredUsers.length === 0 && (
+              <div className="text-center py-12 text-foreground/50">
+                No users found
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,9 +1,8 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/db';
+import mongoose, { Document, Schema, Model } from 'mongoose';
+import { userConnection } from '../config/mongoDb'; // Use user connection
 
-// Define the attributes for the User model
-interface UserAttributes {
-  id: number;
+// Define the interface for User document
+export interface IUser extends Document {
   username: string;
   email: string;
   password: string;
@@ -17,104 +16,79 @@ interface UserAttributes {
   pop3User?: string;
   pop3Password?: string;
   pop3TLS?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// Define the creation attributes (id and isActive are optional)
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isActive'> {}
-
-// Define the User model class
-class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
-  public id!: number;
-  public username!: string;
-  public email!: string;
-  public password!: string;
-  public role!: 'admin' | 'user';
-  public isActive!: boolean;
-  public domain!: string | undefined;
-  public isDefaultDomain!: boolean | undefined;
-  public accountClassification!: string | undefined;
-  public pop3Host!: string | undefined;
-  public pop3Port!: number | undefined;
-  public pop3User!: string | undefined;
-  public pop3Password!: string | undefined;
-  public pop3TLS!: boolean | undefined;
-
-  // Timestamps
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
-}
-
-// Initialize the User model
-User.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    username: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-      validate: {
-        isEmail: true,
-      },
-    },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    role: {
-      type: DataTypes.ENUM('admin', 'user'),
-      defaultValue: 'user',
-    },
-    isActive: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-    },
-    pop3Host: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    pop3Port: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    pop3User: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    pop3Password: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    domain: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    isDefaultDomain: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    accountClassification: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    pop3TLS: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-    },
+// Define the User schema
+const UserSchema: Schema<IUser> = new Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
   },
-  {
-    sequelize,
-    tableName: 'users',
-    timestamps: true,
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true,
+    validate: {
+      validator: function(v: string) {
+        return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/.test(v);
+      },
+      message: props => `${props.value} is not a valid email address!`
+    }
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  role: {
+    type: String,
+    enum: ['admin', 'user'],
+    default: 'user'
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  domain: {
+    type: String,
+    trim: true
+  },
+  isDefaultDomain: {
+    type: Boolean,
+    default: false
+  },
+  accountClassification: {
+    type: String,
+    trim: true
+  },
+  pop3Host: {
+    type: String,
+    trim: true
+  },
+  pop3Port: {
+    type: Number
+  },
+  pop3User: {
+    type: String,
+    trim: true
+  },
+  pop3Password: {
+    type: String
+  },
+  pop3TLS: {
+    type: Boolean,
+    default: true
   }
-);
+}, {
+  timestamps: true // Automatically adds createdAt and updatedAt fields
+});
+
+// Create and export the User model using user connection
+const User: Model<IUser> = userConnection.model<IUser>('User', UserSchema);
 
 export default User;

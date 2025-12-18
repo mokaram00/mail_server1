@@ -1,21 +1,104 @@
 import { Request, Response } from 'express';
-import { Op } from 'sequelize';
 import bcrypt from 'bcryptjs';
+import Admin from '../models/Admin';
 import User from '../models/User';
 import Email from '../models/Email';
-import sequelize from '../config/db';
+import Domain from '../models/Domain';
+import Category from '../models/Category';
 
-export const getUsers = async (req: Request, res: Response): Promise<Response> => {
+// Extend the Request type to include admin property
+interface AdminAuthRequest extends Request {
+  admin?: {
+    id: string;
+    role: string;
+  };
+  user?: any; // Keep for backward compatibility
+}
+
+// Register a domain (internal use)
+const registerDomain = async (domain: string): Promise<void> => {
+  console.log(`Attempting to register domain: ${domain}`);
+  
+  // Don't register empty domains
+  if (!domain || domain.trim() === '') {
+    console.log('Skipping domain registration for empty domain');
+    return;
+  }
+  
+  // Check if domain already exists
+  const existingDomain = await Domain.findOne({
+    domain: domain
+  });
+  
+  console.log(`Domain ${domain} exists: ${!!existingDomain}`);
+
+  if (!existingDomain) {
+    console.log(`Creating domain record: ${domain}`);
+    try {
+      // Create a domain record
+      const domainRecord = new Domain({
+        domain: domain,
+        isDefault: false
+      });
+      
+      await domainRecord.save();
+      console.log(`Domain record created for domain: ${domain}`);
+    } catch (error) {
+      console.error(`Error creating domain record for domain ${domain}:`, error);
+      throw error;
+    }
+  } else {
+    console.log(`Domain ${domain} already exists, skipping registration`);
+  }
+};
+
+// Register a classification (internal use)
+const registerClassification = async (classification: string): Promise<void> => {
+  console.log(`Attempting to register classification: ${classification}`);
+  
+  // Don't register empty classifications
+  if (!classification || classification.trim() === '') {
+    console.log('Skipping classification registration for empty classification');
+    return;
+  }
+  
+  // Check if classification already exists
+  const existingClassification = await Category.findOne({
+    name: classification
+  });
+  
+  console.log(`Classification ${classification} exists: ${!!existingClassification}`);
+
+  if (!existingClassification) {
+    console.log(`Creating category record: ${classification}`);
+    try {
+      // Create a category record
+      const categoryRecord = new Category({
+        name: classification
+      });
+
+      await categoryRecord.save();
+      console.log(`Category record created for classification: ${classification}`);
+    } catch (error) {
+      console.error(`Error creating category record for classification ${classification}:`, error);
+      throw error;
+    }
+  } else {
+    console.log(`Classification ${classification} already exists, skipping registration`);
+  }
+};
+
+export const getUsers = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
-    // Get all users except the current admin
-    const users = await User.findAll({
-      attributes: { exclude: ['password'] }, // Exclude passwords
-      where: {
-        id: {
-          [Op.ne]: req.user.id, // Not equal to current user
-        },
-      },
-    });
+    // Get all users except the current admin and except permanent classification/domain users
+    const users = await User.find({
+      _id: { $ne: req.admin?.id }, // Not equal to current admin
+      username: { 
+        $not: { 
+          $regex: /^(classification_|domain_)/ 
+        } 
+      } // Exclude permanent classification and domain users
+    }).select('-password'); // Exclude passwords
 
     return res.status(200).json({
       users,
@@ -31,9 +114,7 @@ export const getUserById = async (req: Request, res: Response): Promise<Response
     const { id } = req.params;
 
     // Find user by ID
-    const user = await User.findByPk(id, {
-      attributes: { exclude: ['password'] }, // Exclude password
-    });
+    const user = await User.findById(id).select('-password'); // Exclude password
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -48,7 +129,7 @@ export const getUserById = async (req: Request, res: Response): Promise<Response
   }
 };
 
-export const updateUserRole = async (req: Request, res: Response): Promise<Response> => {
+export const updateUserRole = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
     const { role } = req.body;
@@ -59,24 +140,25 @@ export const updateUserRole = async (req: Request, res: Response): Promise<Respo
     }
 
     // Find user by ID
-    const user = await User.findByPk(id);
+    const user = await User.findById(id);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Prevent user from changing their own role
-    if (user.id === req.user.id) {
+    if (user._id.toString() === req.admin?.id) {
       return res.status(400).json({ message: 'Cannot change your own role' });
     }
 
     // Update user role
-    await user.update({ role });
+    user.role = role as 'admin' | 'user';
+    await user.save();
 
     return res.status(200).json({
       message: 'User role updated successfully',
       user: {
-        id: user.id,
+        id: user._id,
         username: user.username,
         email: user.email,
         role: user.role,
@@ -95,19 +177,20 @@ export const updateUserClassification = async (req: Request, res: Response): Pro
     const { classification } = req.body;
 
     // Find user by ID
-    const user = await User.findByPk(id);
+    const user = await User.findById(id);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Update user classification
-    await user.update({ accountClassification: classification || null });
+    user.accountClassification = classification || null;
+    await user.save();
 
     return res.status(200).json({
       message: 'User classification updated successfully',
       user: {
-        id: user.id,
+        id: user._id,
         username: user.username,
         email: user.email,
         accountClassification: user.accountClassification,
@@ -119,29 +202,30 @@ export const updateUserClassification = async (req: Request, res: Response): Pro
   }
 };
 
-export const deactivateUser = async (req: Request, res: Response): Promise<Response> => {
+export const deactivateUser = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
 
     // Find user by ID
-    const user = await User.findByPk(id);
+    const user = await User.findById(id);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Prevent user from deactivating themselves
-    if (user.id === req.user.id) {
+    if (user._id.toString() === req.admin?.id) {
       return res.status(400).json({ message: 'Cannot deactivate your own account' });
     }
 
     // Deactivate user
-    await user.update({ isActive: false });
+    user.isActive = false;
+    await user.save();
 
     return res.status(200).json({
       message: 'User deactivated successfully',
       user: {
-        id: user.id,
+        id: user._id,
         username: user.username,
         email: user.email,
         isActive: user.isActive,
@@ -153,15 +237,30 @@ export const deactivateUser = async (req: Request, res: Response): Promise<Respo
   }
 };
 
-export const getSystemStats = async (req: Request, res: Response): Promise<Response> => {
+export const getSystemStats = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
-    // Get system statistics
-    const totalUsers = await User.count();
-    const totalEmails = await Email.count();
-    const activeUsers = await User.count({
-      where: {
-        isActive: true,
-      },
+    // Get system statistics excluding permanent classification/domain users
+    const totalUsers = await User.countDocuments({
+      username: { 
+        $not: { 
+          $regex: /^(classification_|domain_)/ 
+        } 
+      }
+    });
+    const totalEmails = await Email.countDocuments();
+    const activeUsers = await User.countDocuments({
+      isActive: true,
+      username: { 
+        $not: { 
+          $regex: /^(classification_|domain_)/ 
+        } 
+      }
+    });
+
+    // Get admin statistics
+    const totalAdmins = await Admin.countDocuments();
+    const activeAdmins = await Admin.countDocuments({
+      isActive: true,
     });
 
     return res.status(200).json({
@@ -169,6 +268,8 @@ export const getSystemStats = async (req: Request, res: Response): Promise<Respo
         totalUsers,
         totalEmails,
         activeUsers,
+        totalAdmins,
+        activeAdmins
       },
     });
   } catch (error) {
@@ -177,7 +278,7 @@ export const getSystemStats = async (req: Request, res: Response): Promise<Respo
   }
 };
 
-export const createUser = async (req: Request, res: Response): Promise<Response> => {
+export const createUser = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     let { username, email, password, role, domain, isDefaultDomain, accountClassification } = req.body;
     console.log('Creating user with data:', { username, email, role, domain, isDefaultDomain, accountClassification });
@@ -188,11 +289,15 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       return res.status(400).json({ message: 'Username and password are required' });
     }
 
+    // Handle empty strings for domain and accountClassification
+    if (domain === '') domain = null;
+    if (accountClassification === '') accountClassification = null;
+
     // Automatically generate email if domain is provided and email is not
-    if (domain && !email) {
+    if (domain && domain.trim() !== '' && !email) {
       email = `${username}@${domain}`;
       console.log(`Generated email from domain: ${email}`);
-    } else if (domain && email && !email.endsWith(`@${domain}`)) {
+    } else if (domain && domain.trim() !== '' && email && !email.endsWith(`@${domain}`)) {
       // If both email and domain are provided but email doesn't match domain, use the domain
       email = `${username}@${domain}`;
       console.log(`Overrode email with domain-based email: ${email}`);
@@ -212,9 +317,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
 
     // Check if user already exists
     const existingUser = await User.findOne({
-      where: {
-        email: email,
-      },
+      email: email,
     });
 
     if (existingUser) {
@@ -222,16 +325,28 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
-    // Register the classification if provided
-    if (accountClassification) {
-      console.log(`Registering classification: ${accountClassification}`);
-      await registerClassification(accountClassification);
+    // Check if the classification exists in the Category collection
+    if (accountClassification && accountClassification.trim() !== '') {
+      const existingClassification = await Category.findOne({
+        name: accountClassification
+      });
+
+      if (!existingClassification) {
+        console.log(`Classification ${accountClassification} does not exist`);
+        return res.status(400).json({ message: `Classification '${accountClassification}' does not exist` });
+      }
     }
 
-    // Register the domain if provided
-    if (domain) {
-      console.log(`Registering domain: ${domain}`);
-      await registerDomain(domain);
+    // Check if the domain exists in the Domain collection
+    if (domain && domain.trim() !== '') {
+      const existingDomain = await Domain.findOne({
+        domain: domain
+      });
+
+      if (!existingDomain) {
+        console.log(`Domain ${domain} does not exist`);
+        return res.status(400).json({ message: `Domain '${domain}' does not exist` });
+      }
     }
 
     // Hash password
@@ -240,7 +355,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     console.log('Password hashed successfully');
 
     // Create user
-    const user = await User.create({
+    const user = new User({
       username,
       email,
       password: hashedPassword,
@@ -250,11 +365,13 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       isDefaultDomain: isDefaultDomain || false,
       accountClassification: accountClassification || null,
     });
-    console.log(`User created successfully with ID: ${user.id}`);
+    
+    await user.save();
+    console.log(`User created successfully with ID: ${user._id}`);
 
     // Return user data without password
     const userData = {
-      id: user.id,
+      id: user._id,
       username: user.username,
       email: user.email,
       role: user.role,
@@ -297,11 +414,15 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
         });
       }
 
+      // Handle empty strings for domain and accountClassification
+      if (user.domain === '') user.domain = null;
+      if (user.accountClassification === '') user.accountClassification = null;
+
       // Automatically generate email if domain is provided and email is not
-      if (user.domain && !user.email) {
+      if (user.domain && user.domain.trim() !== '' && !user.email) {
         user.email = `${user.username}@${user.domain}`;
         console.log(`Generated email for user ${user.username}: ${user.email}`);
-      } else if (user.domain && user.email && !user.email.endsWith(`@${user.domain}`)) {
+      } else if (user.domain && user.domain.trim() !== '' && user.email && !user.email.endsWith(`@${user.domain}`)) {
         // If both email and domain are provided but email doesn't match domain, use the domain
         user.email = `${user.username}@${user.domain}`;
         console.log(`Overrode email for user ${user.username}: ${user.email}`);
@@ -329,11 +450,9 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
     // Check for existing users
     const emails = users.map(user => user.email);
     console.log('Checking for existing users with emails:', emails);
-    const existingUsers = await User.findAll({
-      where: {
-        email: {
-          [Op.in]: emails
-        }
+    const existingUsers = await User.find({
+      email: {
+        $in: emails
       }
     });
 
@@ -346,17 +465,35 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       });
     }
 
-    // Register any new classifications and domains
-    console.log('Registering classifications and domains');
+    // Check if all classifications and domains exist
+    console.log('Checking classifications and domains');
     for (const user of users) {
-      if (user.accountClassification) {
-        console.log(`Registering classification for user ${user.username}: ${user.accountClassification}`);
-        await registerClassification(user.accountClassification);
+      if (user.accountClassification && user.accountClassification.trim() !== '') {
+        const existingClassification = await Category.findOne({
+          name: user.accountClassification
+        });
+
+        if (!existingClassification) {
+          console.log(`Classification ${user.accountClassification} does not exist`);
+          return res.status(400).json({ 
+            message: `Classification '${user.accountClassification}' does not exist`,
+            user: user
+          });
+        }
       }
       
-      if (user.domain) {
-        console.log(`Registering domain for user ${user.username}: ${user.domain}`);
-        await registerDomain(user.domain);
+      if (user.domain && user.domain.trim() !== '') {
+        const existingDomain = await Domain.findOne({
+          domain: user.domain
+        });
+
+        if (!existingDomain) {
+          console.log(`Domain ${user.domain} does not exist`);
+          return res.status(400).json({ 
+            message: `Domain '${user.domain}' does not exist`,
+            user: user
+          });
+        }
       }
     }
 
@@ -381,12 +518,12 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 
     // Create all users
     console.log('Creating users');
-    const createdUsers = await User.bulkCreate(usersToCreate);
+    const createdUsers = await User.insertMany(usersToCreate);
     console.log(`Created ${createdUsers.length} users successfully`);
 
     // Return user data without passwords
     const userData = createdUsers.map(user => ({
-      id: user.id,
+      id: user._id,
       username: user.username,
       email: user.email,
       role: user.role,
@@ -410,30 +547,20 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 export const getDomains = async (req: Request, res: Response): Promise<Response> => {
   try {
     console.log('Fetching all domains');
-    // Get all unique domains from users with active or inactive status
-    const domains = await User.findAll({
-      attributes: [
-        [sequelize.fn('DISTINCT', sequelize.col('domain')), 'domain'],
-        'isDefaultDomain'
-      ],
-      where: {
-        domain: {
-          [Op.not]: null
-        }
-      } as any,
-      // Order by domain name for consistent results
-      order: [[sequelize.col('domain'), 'ASC']]
-    });
+    // Get all domains from the Domain collection
+    const domains = await Domain.find({}, { domain: 1, isDefault: 1 });
     
     console.log(`Found ${domains.length} domains`);
-    const domainList = domains.map(d => ({
-      domain: d.getDataValue('domain'),
-      isDefault: d.getDataValue('isDefaultDomain')
+    
+    const domainDetails = domains.map(domain => ({
+      domain: domain.domain,
+      isDefault: domain.isDefault
     }));
-    console.log('Domain list:', domainList);
+    
+    console.log('Domain list:', domainDetails);
 
     return res.status(200).json({
-      domains: domainList
+      domains: domainDetails
     });
   } catch (error) {
     console.error('Get domains error:', error);
@@ -454,10 +581,8 @@ export const addDomain = async (req: Request, res: Response): Promise<Response> 
     }
 
     // Check if domain already exists
-    const existingDomain = await User.findOne({
-      where: {
-        domain: domain
-      }
+    const existingDomain = await Domain.findOne({
+      domain: domain
     });
 
     if (existingDomain) {
@@ -465,22 +590,15 @@ export const addDomain = async (req: Request, res: Response): Promise<Response> 
       return res.status(400).json({ message: 'Domain already exists' });
     }
 
-    console.log(`Creating dummy user for domain: ${domain}`);
-    // Create a dummy user with this domain to register it
-    // In a real implementation, you might want to store domains separately
-    const dummyUser = await User.create({
-      username: `domain_${Date.now()}`,
-      email: `domain_${Date.now()}@${domain}`,
-      password: 'dummy_password',
-      role: 'user',
-      isActive: false,
+    console.log(`Creating domain record: ${domain}`);
+    // Create a domain record
+    const domainRecord = new Domain({
       domain: domain,
-      isDefaultDomain: false
+      isDefault: false
     });
-
-    console.log(`Dummy user created, now destroying it`);
-    // Delete the dummy user since we only needed to register the domain
-    await dummyUser.destroy();
+    
+    await domainRecord.save();
+    console.log(`Domain record created for domain: ${domain}`);
 
     console.log(`Domain ${domain} added successfully`);
     return res.status(201).json({
@@ -496,108 +614,20 @@ export const addDomain = async (req: Request, res: Response): Promise<Response> 
 // Get all account classifications
 export const getAccountClassifications = async (req: Request, res: Response): Promise<Response> => {
   try {
-    // Get all unique account classifications
-    const classifications = await User.findAll({
-      attributes: [
-        [sequelize.fn('DISTINCT', sequelize.col('accountClassification')), 'accountClassification']
-      ],
-      where: {
-        accountClassification: {
-          [Op.not]: null
-        }
-      } as any,
-      // Order by classification name for consistent results
-      order: [[sequelize.col('accountClassification'), 'ASC']]
-    });
+    console.log('Fetching all account classifications');
+    // Get all categories from the Category collection
+    const categories = await Category.find({}, { name: 1 });
+    
+    console.log(`Found ${categories.length} classifications`);
+    const classifications = categories.map(category => category.name);
+    console.log('Classification list:', classifications);
 
     return res.status(200).json({
-      classifications: classifications.map(c => c.getDataValue('accountClassification'))
+      classifications: classifications.map(c => ({ classification: c }))
     });
   } catch (error) {
     console.error('Get account classifications error:', error);
     return res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-// Register a classification (internal use)
-const registerClassification = async (classification: string): Promise<void> => {
-  console.log(`Attempting to register classification: ${classification}`);
-  
-  // Check if classification already exists
-  const existingClassification = await User.findOne({
-    where: {
-      accountClassification: classification
-    }
-  });
-  
-  console.log(`Classification ${classification} exists: ${!!existingClassification}`);
-
-  if (!existingClassification) {
-    console.log(`Creating dummy user for classification: ${classification}`);
-    try {
-      // Create a dummy user with this classification to register it
-      // In a real implementation, you might want to store classifications separately
-      const dummyUser = await User.create({
-        username: `classification_${Date.now()}`,
-        email: `classification_${Date.now()}@temp.com`,
-        password: 'dummy_password',
-        role: 'user',
-        isActive: false,
-        accountClassification: classification
-      });
-
-      console.log(`Dummy user created for classification: ${classification}`);
-      // Delete the dummy user since we only needed to register the classification
-      await dummyUser.destroy();
-      console.log(`Dummy user destroyed for classification: ${classification}`);
-    } catch (error) {
-      console.error(`Error creating dummy user for classification ${classification}:`, error);
-      throw error;
-    }
-  } else {
-    console.log(`Classification ${classification} already exists, skipping registration`);
-  }
-};
-
-// Register a domain (internal use)
-const registerDomain = async (domain: string): Promise<void> => {
-  console.log(`Attempting to register domain: ${domain}`);
-  
-  // Check if domain already exists
-  const existingDomain = await User.findOne({
-    where: {
-      domain: domain
-    }
-  });
-  
-  console.log(`Domain ${domain} exists: ${!!existingDomain}`);
-
-  if (!existingDomain) {
-    console.log(`Creating dummy user for domain: ${domain}`);
-    try {
-      // Create a dummy user with this domain to register it
-      // In a real implementation, you might want to store domains separately
-      const dummyUser = await User.create({
-        username: `domain_${Date.now()}`,
-        email: `domain_${Date.now()}@${domain}`,
-        password: 'dummy_password',
-        role: 'user',
-        isActive: false,
-        domain: domain,
-        isDefaultDomain: false
-      });
-      
-      console.log(`Dummy user created for domain: ${domain}`);
-
-      // Delete the dummy user since we only needed to register the domain
-      await dummyUser.destroy();
-      console.log(`Dummy user destroyed for domain: ${domain}`);
-    } catch (error) {
-      console.error(`Error creating dummy user for domain ${domain}:`, error);
-      throw error;
-    }
-  } else {
-    console.log(`Domain ${domain} already exists, skipping registration`);
   }
 };
 
@@ -613,9 +643,24 @@ export const addAccountClassification = async (req: Request, res: Response): Pro
       return res.status(400).json({ message: 'Classification is required' });
     }
 
-    console.log(`Registering classification: ${classification}`);
-    // Register the classification
-    await registerClassification(classification);
+    // Check if classification already exists
+    const existingClassification = await Category.findOne({
+      name: classification
+    });
+
+    if (existingClassification) {
+      console.log(`Classification ${classification} already exists`);
+      return res.status(400).json({ message: 'Classification already exists' });
+    }
+
+    console.log(`Creating category record: ${classification}`);
+    // Create a category record
+    const categoryRecord = new Category({
+      name: classification
+    });
+
+    await categoryRecord.save();
+    console.log(`Category record created for classification: ${classification}`);
 
     console.log(`Classification ${classification} added successfully`);
     return res.status(201).json({
@@ -628,258 +673,57 @@ export const addAccountClassification = async (req: Request, res: Response): Pro
   }
 };
 
-// Set default domain
-export const setDefaultDomain = async (req: Request, res: Response): Promise<Response> => {
-  try {
-    const { domain } = req.body;
-
-    // Validate input
-    if (!domain) {
-      return res.status(400).json({ message: 'Domain is required' });
-    }
-
-    // First unset any existing default domain
-    await User.update(
-      { isDefaultDomain: false },
-      { where: { isDefaultDomain: true } }
-    );
-
-    // Set the new default domain
-    await User.update(
-      { isDefaultDomain: true },
-      { where: { domain: domain } }
-    );
-
-    return res.status(200).json({
-      message: `Default domain set to ${domain}`
-    });
-  } catch (error) {
-    console.error('Set default domain error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-// Update admin profile
-export const updateAdminProfile = async (req: Request, res: Response): Promise<Response> => {
-  try {
-    const { username, email } = req.body;
-    const adminId = req.user.id;
-
-    // Validate input
-    if (!username && !email) {
-      return res.status(400).json({ message: 'Username or email is required' });
-    }
-
-    // Check if email already exists (if updating email)
-    if (email) {
-      const existingUser = await User.findOne({
-        where: {
-          email: email,
-          id: {
-            [Op.ne]: adminId
-          }
-        }
-      });
-
-      if (existingUser) {
-        return res.status(400).json({ message: 'Email already exists' });
-      }
-    }
-
-    // Update admin profile
-    const updates: any = {};
-    if (username) updates.username = username;
-    if (email) updates.email = email;
-
-    const updatedAdmin = await User.update(updates, {
-      where: { id: adminId }
-    });
-
-    if (updatedAdmin[0] === 0) {
-      return res.status(404).json({ message: 'Admin not found' });
-    }
-
-    // Get updated admin data
-    const admin = await User.findByPk(adminId, {
-      attributes: { exclude: ['password'] }
-    });
-
-    return res.status(200).json({
-      message: 'Profile updated successfully',
-      user: admin
-    });
-  } catch (error) {
-    console.error('Update admin profile error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-// Change admin password
-export const changeAdminPassword = async (req: Request, res: Response): Promise<Response> => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    const adminId = req.user.id;
-
-    // Validate input
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: 'Current password and new password are required' });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: 'New password must be at least 6 characters long' });
-    }
-
-    // Get admin with password
-    const admin = await User.findByPk(adminId);
-
-    if (!admin) {
-      return res.status(404).json({ message: 'Admin not found' });
-    }
-
-    // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, admin.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Current password is incorrect' });
-    }
-
-    // Hash new password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-    // Update password
-    await User.update(
-      { password: hashedPassword },
-      { where: { id: adminId } }
-    );
-
-    return res.status(200).json({
-      message: 'Password changed successfully'
-    });
-  } catch (error) {
-    console.error('Change admin password error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-// Get admin profile
-export const getAdminProfile = async (req: Request, res: Response): Promise<Response> => {
-  try {
-    const adminId = req.user.id;
-
-    // Get admin data without password
-    const admin = await User.findByPk(adminId, {
-      attributes: { exclude: ['password'] }
-    });
-
-    if (!admin) {
-      return res.status(404).json({ message: 'Admin not found' });
-    }
-
-    return res.status(200).json({
-      user: admin
-    });
-  } catch (error) {
-    console.error('Get admin profile error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
 // Get emails by classification
 export const getEmailsByClassification = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { classification } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { domain } = req.query;
     
-    // Validate pagination parameters
-    const pageNum = parseInt(page as string) || 1;
-    const limitNum = parseInt(limit as string) || 10;
-    const offset = (pageNum - 1) * limitNum;
-    
-    // Find users with the specified classification
-    const users = await User.findAll({
-      where: {
-        accountClassification: classification
-      },
-      attributes: ['id']
+    console.log(`Fetching emails for classification: ${classification} with domain filter: ${domain}`);
+
+    // Check if the classification exists
+    const existingClassification = await Category.findOne({
+      name: classification
     });
-    
-    const userIds = users.map(user => user.id);
-    
-    if (userIds.length === 0) {
-      return res.status(200).json({
-        emails: [],
-        pagination: {
-          currentPage: pageNum,
-          totalPages: 0,
-          totalEmails: 0,
-          hasNextPage: false,
-          hasPrevPage: false
-        }
+
+    if (!existingClassification) {
+      console.log(`Classification ${classification} does not exist`);
+      return res.status(400).json({ message: `Classification '${classification}' does not exist` });
+    }
+
+    // Find users with the specified classification
+    const userQuery: any = { 
+      accountClassification: classification
+    };
+    if (domain) {
+      // Check if the domain exists
+      const existingDomain = await Domain.findOne({
+        domain: domain
       });
+
+      if (!existingDomain) {
+        console.log(`Domain ${domain} does not exist`);
+        return res.status(400).json({ message: `Domain '${domain}' does not exist` });
+      }
+      
+      userQuery.domain = domain;
     }
     
-    // Get emails for these users
-    const { count, rows } = await Email.findAndCountAll({
-      where: {
-        [Op.or]: [
-          { senderId: { [Op.in]: userIds } },
-          { recipientId: { [Op.in]: userIds } }
-        ]
-      },
-      include: [
-        {
-          model: User,
-          as: 'sender',
-          attributes: ['id', 'username', 'email']
-        },
-        {
-          model: User,
-          as: 'recipient',
-          attributes: ['id', 'username', 'email']
-        }
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: limitNum,
-      offset: offset
-    });
-    
-    const totalPages = Math.ceil(count / limitNum);
-    
+    const users = await User.find(userQuery, { email: 1, username: 1, password: 1, domain: 1 });
+
+    console.log(`Found ${users.length} users with classification ${classification}`);
+
     return res.status(200).json({
-      emails: rows,
-      pagination: {
-        currentPage: pageNum,
-        totalPages: totalPages,
-        totalEmails: count,
-        hasNextPage: pageNum < totalPages,
-        hasPrevPage: pageNum > 1
-      }
+      users: users.map(user => ({
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        password: user.password, // Include actual password as requested
+        domain: user.domain
+      }))
     });
   } catch (error) {
     console.error('Get emails by classification error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-// Get user password (for admin use only)
-export const getUserPassword = async (req: Request, res: Response): Promise<Response> => {
-  try {
-    const { id } = req.params;
-
-    // Find user by ID
-    const user = await User.findByPk(id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Return user password (in a real implementation, you might want to decrypt it if encrypted)
-    // For this implementation, we'll return a masked version for security
-    return res.status(200).json({
-      password: user.password
-    });
-  } catch (error) {
-    console.error('Get user password error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };

@@ -1,47 +1,67 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import Admin from '../models/Admin';
 
-// Extend the Request type to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-    }
-  }
+// Extend the Request type to include user and admin properties
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    role: string;
+  };
+  admin?: {
+    id: string;
+    role: string;
+  };
 }
 
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
-  }
-
+const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<Response | void> => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key') as { userId: number };
-    const user = await User.findByPk(decoded.userId);
+    // Check for token in cookies
+    const token = req.cookies.token;
     
-    if (!user) {
-      return res.status(403).json({ message: 'User not found' });
+    if (!token) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
     }
     
-    req.user = user;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key') as { userId?: string, adminId?: string, role: string };
+    
+    // Check if it's a user token
+    if (decoded.userId) {
+      const user = await User.findById(decoded.userId).select('-password');
+      if (!user) {
+        return res.status(401).json({ message: 'Token is not valid' });
+      }
+
+      req.user = {
+        id: user._id.toString(),
+        role: user.role
+      };
+      req.admin = undefined; // Ensure admin is not set
+    } 
+    // Check if it's an admin token
+    else if (decoded.adminId) {
+      const admin = await Admin.findById(decoded.adminId).select('-password');
+      if (!admin) {
+        return res.status(401).json({ message: 'Token is not valid' });
+      }
+
+      req.admin = {
+        id: admin._id.toString(),
+        role: admin.role
+      };
+      req.user = undefined; // Ensure user is not set
+    } 
+    // Invalid token
+    else {
+      return res.status(401).json({ message: 'Token is not valid' });
+    }
+    
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Invalid or expired token' });
+    console.error('Auth error:', error);
+    res.status(401).json({ message: 'Token is not valid' });
   }
 };
 
-export const authorizeAdmin = (req: Request, res: Response, next: NextFunction): Response | void => {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
-
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
-  }
-
-  next();
-};
+export default auth;

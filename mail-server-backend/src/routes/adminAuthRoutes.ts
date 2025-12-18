@@ -1,0 +1,16 @@
+import express from 'express';
+import { adminLogin, getAdminProfile, updateAdminProfile, adminLogout, updateAdminPassword } from '../controllers/adminAuthController';
+import adminAuth from '../middleware/auth';
+
+const router = express.Router();
+
+// Public routes
+router.post('/login', adminLogin);
+
+// Protected routes
+router.get('/profile', adminAuth, getAdminProfile);
+router.put('/profile', adminAuth, updateAdminProfile);
+router.put('/profile/password', adminAuth, updateAdminPassword);
+router.post('/logout', adminAuth, adminLogout);
+
+export default router;

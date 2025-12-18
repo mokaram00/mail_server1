@@ -3,6 +3,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 
+// Extend the Request type to include user property
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    role: string;
+  };
+}
+
 export const register = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { username, email, password } = req.body;
@@ -14,9 +22,7 @@ export const register = async (req: Request, res: Response): Promise<Response> =
 
     // Check if user already exists
     const existingUser = await User.findOne({
-      where: {
-        email: email,
-      },
+      email: email,
     });
 
     if (existingUser) {
@@ -28,24 +34,33 @@ export const register = async (req: Request, res: Response): Promise<Response> =
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Create user
-    const user = await User.create({
+    const user = new User({
       username,
       email,
       password: hashedPassword,
       role: 'user', // Default role
       isActive: true, // Default active status
     });
+    
+    await user.save();
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id },
+      { userId: user._id },
       process.env.JWT_SECRET || 'fallback_secret_key',
       { expiresIn: '24h' }
     );
 
+    // Set token in cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     // Return user data without password
     const userData = {
-      id: user.id,
+      id: user._id,
       username: user.username,
       email: user.email,
       role: user.role,
@@ -54,7 +69,6 @@ export const register = async (req: Request, res: Response): Promise<Response> =
     return res.status(201).json({
       message: 'User registered successfully',
       user: userData,
-      token,
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -73,9 +87,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 
     // Find user by email
     const user = await User.findOne({
-      where: {
-        email: email,
-      },
+      email: email,
     });
 
     if (!user) {
@@ -95,14 +107,21 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id },
+      { userId: user._id },
       process.env.JWT_SECRET || 'fallback_secret_key',
       { expiresIn: '24h' }
     );
 
+    // Set token in cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     // Return user data without password
     const userData = {
-      id: user.id,
+      id: user._id,
       username: user.username,
       email: user.email,
       role: user.role,
@@ -111,7 +130,6 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     return res.status(200).json({
       message: 'Login successful',
       user: userData,
-      token,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -119,15 +137,13 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
   }
 };
 
-export const getProfile = async (req: Request, res: Response): Promise<Response> => {
+export const getProfile = async (req: AuthRequest, res: Response): Promise<Response> => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const user = await User.findByPk(req.user.id, {
-      attributes: { exclude: ['password'] }, // Exclude password from response
-    });
+    const user = await User.findById(req.user.id).select('-password'); // Exclude password from response
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -138,6 +154,20 @@ export const getProfile = async (req: Request, res: Response): Promise<Response>
     });
   } catch (error) {
     console.error('Get profile error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const logout = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    // Clear the token cookie
+    res.clearCookie('token');
+    
+    return res.status(200).json({
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };

@@ -2,43 +2,31 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiClient } from '../utils/apiClient';
 
 interface Stats {
   totalUsers: number;
   totalEmails: number;
   activeUsers: number;
+  totalAdmins: number;
+  activeAdmins: number;
 }
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
 
-  // Check if user is authenticated and is admin
+  // Fetch stats
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (!storedToken) {
-      router.push('/login');
-      return;
-    }
-    
-    setToken(storedToken);
-    
-    // Fetch stats
-    fetchStats(storedToken);
-  }, [router]);
+    fetchStats();
+  }, []);
 
-  const fetchStats = async (authToken: string) => {
+  const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/stats`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/stats`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch stats');
@@ -63,22 +51,22 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-500">
+        <div className="p-4 bg-destructive/20 border border-destructive rounded-lg text-destructive animate-shake">
           {error}
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fadeInSlideDown">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard Overview</h1>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard Overview</h1>
           <p className="text-foreground/70">Welcome to your admin dashboard</p>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={() => router.push('/admin/settings')}
-            className="px-4 py-2 bg-card border border-foreground/20 rounded-lg hover:bg-muted transition-colors"
+            className="px-4 py-2 bg-card border border-border rounded-lg hover:bg-accent transition-all duration-200 text-foreground transform hover:scale-105"
           >
             Admin Settings
           </button>
@@ -86,105 +74,233 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-card border border-foreground/20 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground/70">Total Users</p>
-              <p className="text-3xl font-bold mt-1">{stats?.totalUsers || 0}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fadeInSlideUp delay-100">
+        <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-border transform hover:-translate-y-1">
+          <div className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground/70">Total Users</p>
+                <p className="text-2xl font-bold mt-1 text-foreground">{stats?.totalUsers || 0}</p>
+              </div>
+              <div className="p-2.5 bg-primary/10 rounded-lg">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
             </div>
-            <div className="p-3 bg-blue-500/10 rounded-lg">
-              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-card border border-foreground/20 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground/70">Active Users</p>
-              <p className="text-3xl font-bold mt-1">{stats?.activeUsers || 0}</p>
-            </div>
-            <div className="p-3 bg-green-500/10 rounded-lg">
-              <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="mt-3">
+              <div className="flex items-center text-xs text-green-600">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <span>12% since last month</span>
+              </div>
             </div>
           </div>
         </div>
         
-        <div className="bg-card border border-foreground/20 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground/70">Total Emails</p>
-              <p className="text-3xl font-bold mt-1">{stats?.totalEmails || 0}</p>
+        <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-border transform hover:-translate-y-1">
+          <div className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground/70">Active Users</p>
+                <p className="text-2xl font-bold mt-1 text-foreground">{stats?.activeUsers || 0}</p>
+              </div>
+              <div className="p-2.5 bg-green-500/10 rounded-lg">
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             </div>
-            <div className="p-3 bg-purple-500/10 rounded-lg">
-              <svg className="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
+            <div className="mt-3">
+              <div className="flex items-center text-xs text-green-600">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <span>8% since last month</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-border transform hover:-translate-y-1">
+          <div className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground/70">Total Emails</p>
+                <p className="text-2xl font-bold mt-1 text-foreground">{stats?.totalEmails || 0}</p>
+              </div>
+              <div className="p-2.5 bg-purple-500/10 rounded-lg">
+                <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-center text-xs text-red-600">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <span>3% since last month</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-border transform hover:-translate-y-1">
+          <div className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground/70">Total Admins</p>
+                <p className="text-2xl font-bold mt-1 text-foreground">{stats?.totalAdmins || 0}</p>
+              </div>
+              <div className="p-2.5 bg-yellow-500/10 rounded-lg">
+                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-center text-xs text-green-600">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <span>5% since last month</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-card border border-foreground/20 rounded-xl p-6 shadow-sm">
-        <h2 className="text-2xl font-semibold mb-6">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button 
-            onClick={() => router.push('/admin/users')}
-            className="p-5 bg-foreground/5 rounded-lg hover:bg-foreground/10 transition-colors text-left border border-foreground/10"
-          >
-            <div className="p-2 bg-blue-500/10 rounded-lg w-fit mb-3">
-              <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeInSlideUp delay-150">
+        {/* Traffic Chart */}
+        <div className="bg-card rounded-xl shadow-sm border border-border">
+          <div className="p-5">
+            <h2 className="text-base font-semibold text-foreground mb-3">Traffic</h2>
+            <div className="h-64 flex items-center justify-center bg-accent rounded-lg">
+              <p className="text-foreground/70 text-sm">Chart visualization would go here</p>
             </div>
-            <h3 className="text-lg font-semibold mb-1">Manage Users</h3>
-            <p className="text-foreground/70 text-sm">Create, edit, and delete user accounts</p>
-          </button>
+          </div>
+        </div>
+        
+        {/* Revenue Chart */}
+        <div className="bg-card rounded-xl shadow-sm border border-border">
+          <div className="p-5">
+            <h2 className="text-base font-semibold text-foreground mb-3">Revenue</h2>
+            <div className="h-64 flex items-center justify-center bg-accent rounded-lg">
+              <p className="text-foreground/70 text-sm">Chart visualization would go here</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Projects Table */}
+      <div className="bg-card rounded-xl shadow-sm border border-border animate-fadeInSlideUp delay-200">
+        <div className="p-5">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+            <h2 className="text-base font-semibold text-foreground">Projects</h2>
+            <button className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 transform hover:scale-105">
+              View Report
+            </button>
+          </div>
           
-          <button 
-            onClick={() => router.push('/admin/domains')}
-            className="p-5 bg-foreground/5 rounded-lg hover:bg-foreground/10 transition-colors text-left border border-foreground/10"
-          >
-            <div className="p-2 bg-green-500/10 rounded-lg w-fit mb-3">
-              <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold mb-1">Manage Domains</h3>
-            <p className="text-foreground/70 text-sm">Configure email domains and settings</p>
-          </button>
-          
-          <button 
-            onClick={() => router.push('/admin/classifications')}
-            className="p-5 bg-foreground/5 rounded-lg hover:bg-foreground/10 transition-colors text-left border border-foreground/10"
-          >
-            <div className="p-2 bg-purple-500/10 rounded-lg w-fit mb-3">
-              <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold mb-1">Classifications</h3>
-            <p className="text-foreground/70 text-sm">Manage account types and classifications</p>
-          </button>
-          
-          <button 
-            onClick={() => router.push('/admin/settings')}
-            className="p-5 bg-foreground/5 rounded-lg hover:bg-foreground/10 transition-colors text-left border border-foreground/10"
-          >
-            <div className="p-2 bg-orange-500/10 rounded-lg w-fit mb-3">
-              <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold mb-1">Admin Settings</h3>
-            <p className="text-foreground/70 text-sm">Update your profile and security settings</p>
-          </button>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-accent">
+                <tr>
+                  <th scope="col" className="px-4 py-2 text-left font-medium text-foreground/70 uppercase tracking-wider">Companies</th>
+                  <th scope="col" className="px-4 py-2 text-left font-medium text-foreground/70 uppercase tracking-wider">Members</th>
+                  <th scope="col" className="px-4 py-2 text-left font-medium text-foreground/70 uppercase tracking-wider">Budget</th>
+                  <th scope="col" className="px-4 py-2 text-left font-medium text-foreground/70 uppercase tracking-wider">Completion</th>
+                </tr>
+              </thead>
+              <tbody className="bg-card divide-y divide-border">
+                <tr className="hover:bg-accent/50 transition-colors duration-150">
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8 bg-primary/10 rounded-md flex items-center justify-center">
+                        <span className="text-primary text-xs font-medium">XD</span>
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-xs font-medium text-foreground">Soft UI XD Version</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex -space-x-1.5">
+                      <img className="h-6 w-6 rounded-full border border-card" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="" />
+                      <img className="h-6 w-6 rounded-full border border-card" src="https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="" />
+                      <img className="h-6 w-6 rounded-full border border-card" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="" />
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">$14,000</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-20 bg-border rounded-full h-1.5">
+                        <div className="bg-primary h-1.5 rounded-full" style={{ width: '60%' }}></div>
+                      </div>
+                      <div className="ml-2 text-xs font-medium text-foreground">60%</div>
+                    </div>
+                  </td>
+                </tr>
+                <tr className="hover:bg-accent/50 transition-colors duration-150">
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8 bg-purple-500/10 rounded-md flex items-center justify-center">
+                        <span className="text-purple-500 text-xs font-medium">AT</span>
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-xs font-medium text-foreground">Add Progress Track</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex -space-x-1.5">
+                      <img className="h-6 w-6 rounded-full border border-card" src="https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="" />
+                      <img className="h-6 w-6 rounded-full border border-card" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="" />
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">$3,000</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-20 bg-border rounded-full h-1.5">
+                        <div className="bg-primary h-1.5 rounded-full" style={{ width: '10%' }}></div>
+                      </div>
+                      <div className="ml-2 text-xs font-medium text-foreground">10%</div>
+                    </div>
+                  </td>
+                </tr>
+                <tr className="hover:bg-accent/50 transition-colors duration-150">
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8 bg-green-500/10 rounded-md flex items-center justify-center">
+                        <span className="text-green-500 text-xs font-medium">SL</span>
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-xs font-medium text-foreground">Fix Platform Errors</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex -space-x-1.5">
+                      <img className="h-6 w-6 rounded-full border border-card" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="" />
+                      <img className="h-6 w-6 rounded-full border border-card" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="" />
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">Not set</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-20 bg-border rounded-full h-1.5">
+                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '100%' }}></div>
+                      </div>
+                      <div className="ml-2 text-xs font-medium text-foreground">100%</div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
