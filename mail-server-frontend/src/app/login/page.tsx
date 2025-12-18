@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '../components/ThemeToggle';
+import apiClient from '../components/apiClient';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     // Simple validation
@@ -27,15 +28,25 @@ export default function Login() {
       return;
     }
     
-    // Simulate loading state
+    // Authenticate with backend
     setIsLoading(true);
+    setError('');
     
-    // In a real application, you would authenticate with your backend here
-    // For now, we'll just redirect to the inbox after a short delay
-    setTimeout(() => {
-      router.push('/inbox');
+    try {
+      const response = await apiClient.login(email, password);
+      
+      if (response.user) {
+        // Successfully logged in, redirect to inbox
+        router.push('/inbox');
+      } else {
+        setError('Invalid email or password');
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to login. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -107,7 +118,7 @@ export default function Login() {
             </form>
           </div>
           <div className="items-center p-6 pt-0 flex justify-center animate-fadeIn delay-200">
-            <p className="text-sm text-foreground">Secure POP3 Email Client</p>
+            <p className="text-sm text-foreground">Secure Email Client</p>
           </div>
         </div>
       </div>

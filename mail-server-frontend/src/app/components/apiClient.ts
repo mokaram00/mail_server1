@@ -32,29 +32,22 @@ interface ApiResponse<T> {
 
 class ApiClient {
   private baseUrl: string;
-  private token: string | null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
-    this.token = null;
-  }
-
-  setToken(token: string | null) {
-    this.token = token;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
-      ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
       ...options.headers,
     };
 
     const config: RequestInit = {
       ...options,
       headers,
-      credentials: 'include',
+      credentials: 'include', // This is important for cookies
     };
 
     try {
