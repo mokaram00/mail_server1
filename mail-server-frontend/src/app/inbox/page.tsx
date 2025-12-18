@@ -24,11 +24,12 @@ interface Email {
 }
 
 export default function Inbox() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [emails, setEmails] = useState<Email[]>([]);
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Email[]>([]);
   
   const router = useRouter();
   
@@ -69,6 +70,7 @@ export default function Inbox() {
     socket.on('newEmail', (newEmail: Email) => {
       console.log('New email received:', newEmail);
       setEmails(prevEmails => [newEmail, ...prevEmails]);
+      setNotifications(prev => [newEmail, ...prev.slice(0, 4)]); // Keep only last 5 notifications
     });
 
     // Clean up listener
@@ -101,18 +103,36 @@ export default function Inbox() {
     });
   };
 
-  const toggleStar = async (id: string) => {
+  const handleEmailSelect = async (email: Email) => {
     try {
-      const email = emails.find(email => email._id === id);
-      if (email) {
-        // In a real implementation, you would update the email on the server
-        setEmails(emails.map(email => 
-          email._id === id ? { ...email, isStarred: !email.isStarred } : email
+      // Fetch the full email details from the backend
+      const response = await apiClient.getEmailById(email._id);
+      
+      if (response.email) {
+        setSelectedEmail(response.email);
+        
+        // Update the email in the list to mark it as read
+        setEmails(emails.map(e => 
+          e._id === email._id ? { ...e, isRead: true } : e
         ));
       }
     } catch (err) {
-      console.error('Error toggling star:', err);
+      console.error('Error fetching email:', err);
+      setSelectedEmail(email); // Fallback to selecting the email anyway
+      
+      // Update the email in the list to mark it as read
+      setEmails(emails.map(e => 
+        e._id === email._id ? { ...e, isRead: true } : e
+      ));
     }
+  };
+
+  const handleBackToInbox = () => {
+    setSelectedEmail(null);
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
   };
 
   if (loading) {
@@ -139,29 +159,67 @@ export default function Inbox() {
       <header className="bg-card border-b border-foreground shadow-sm sticky top-0 z-10">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center">
-            <button 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="mr-4 text-foreground hover:text-muted transition-colors duration-300 lg:hidden"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <h1 className="text-2xl font-bold text-foreground animate-fadeIn">Inbox</h1>
+            <h1 className="text-2xl font-bold text-foreground">Email Inbox</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <button className="text-foreground hover:text-muted transition-colors duration-300 relative">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-foreground animate-pulse"></span>
-            </button>
+            {/* Notifications Dropdown */}
+            <div className="relative">
+              <button className="text-foreground hover:text-muted transition-colors duration-300 relative">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+              
+              {/* Notifications dropdown */}
+              {notifications.length > 0 && (
+                <div className="absolute right-0 mt-2 w-80 bg-card border border-foreground rounded-lg shadow-lg z-20">
+                  <div className="p-3 border-b border-foreground flex justify-between items-center">
+                    <h3 className="font-semibold text-foreground">New Emails</h3>
+                    <button 
+                      onClick={clearNotifications}
+                      className="text-sm text-foreground hover:text-muted"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {notifications.map(notification => (
+                      <div 
+                        key={notification._id} 
+                        className="p-3 border-b border-foreground hover:bg-muted cursor-pointer"
+                        onClick={() => handleEmailSelect(notification)}
+                      >
+                        <div className="font-medium text-foreground truncate">
+                          {notification.subject}
+                        </div>
+                        <div className="text-sm text-foreground truncate">
+                          {notification.fromAddress || 'Unknown Sender'}
+                        </div>
+                        <div className="text-xs text-foreground">
+                          {new Date(notification.createdAt).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
             <ThemeToggle />
+            
             <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-foreground flex items-center justify-center animate-fadeIn">
-                <span className="text-sm font-bold text-background">U</span>
+              <div className="h-10 w-10 rounded-full bg-foreground flex items-center justify-center">
+                <span className="text-sm font-bold text-background">
+                  {emails.length > 0 ? emails[0].fromAddress?.charAt(0) || 'U' : 'U'}
+                </span>
               </div>
             </div>
+            
             <button 
               onClick={handleLogout}
               className="text-sm text-foreground hover:text-muted transition-colors duration-300"
@@ -173,126 +231,96 @@ export default function Inbox() {
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-foreground shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 lg:z-auto lg:flex lg:w-64 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <nav className="mt-8 px-4">
-            <ul className="space-y-2">
-              {[
-                { name: 'Inbox', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', count: emails.filter(e => !e.isRead).length, active: true },
-                { name: 'Drafts', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', count: 0 },
-                { name: 'Saved', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z', count: 0 },
-                { name: 'Snoozed', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', count: 0 },
-                { name: 'Sent', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', count: 0 },
-                { name: 'Trash', icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16', count: 0 }
-              ].map((item, index) => (
-                <li key={index} className="animate-fadeInSlideRight" style={{ animationDelay: `${index * 50}ms` }}>
-                  <a 
-                    href="#" 
-                    className={`flex items-center p-3 text-base font-medium rounded-lg transition-all duration-300 group ${
-                      item.active 
-                        ? 'text-background bg-foreground' 
-                        : 'text-foreground hover:bg-muted'
-                    }`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-foreground group-hover:text-muted transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                    </svg>
-                    <span className="ml-3">{item.name}</span>
-                    {item.count > 0 && (
-                      <span className="ml-auto bg-foreground text-background text-xs font-medium px-2 py-0.5 rounded-full">
-                        {item.count}
-                      </span>
-                    )}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </aside>
-
         {/* Main Content */}
-        <main className="flex-1 p-6 transition-all duration-300 lg:ml-64">
-          <div className="mb-6 animate-fadeInSlideDown">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-bold text-foreground">Inbox</h2>
-                <p className="text-foreground mt-1">{emails.filter(e => !e.isRead).length} unread messages</p>
-                {connected && (
-                  <p className="text-green-500 text-sm mt-1">Real-time updates enabled</p>
-                )}
-              </div>
-              <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-foreground text-background hover:bg-muted h-10 px-4 py-2 hover:scale-[1.02] active:scale-[0.98]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                Compose
-              </button>
-            </div>
-          </div>
-
-          {/* Email List */}
-          <div className="bg-card rounded-xl border border-foreground shadow-lg overflow-hidden animate-fadeInSlideUp">
-            <ul className="divide-y divide-foreground">
-              {emails.map((email, index) => (
-                <li 
-                  key={email._id} 
-                  className={`p-4 hover:bg-muted cursor-pointer transition-all duration-300 ${
-                    !email.isRead ? 'bg-foreground/5 border-l-4 border-foreground' : ''
-                  } animate-fadeInSlideRight`}
-                  style={{ animationDelay: `${index * 50}ms` }}
+        <main className="flex-1 p-6">
+          {selectedEmail ? (
+            /* Email Detail View */
+            <div className="bg-card rounded-xl border border-foreground shadow-lg p-6">
+              <div className="mb-4">
+                <button 
+                  onClick={handleBackToInbox}
+                  className="flex items-center text-foreground hover:text-muted mb-4"
                 >
-                  <div className="flex items-center">
-                    <input 
-                      type="checkbox" 
-                      className="h-4 w-4 text-foreground focus:ring-foreground border-foreground rounded"
-                    />
-                    <button 
-                      onClick={() => toggleStar(email._id)}
-                      className="ml-4 text-foreground hover:text-foreground transition-colors duration-300"
-                    >
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        className={`h-5 w-5 ${email.isStarred ? 'text-foreground fill-current' : ''}`} 
-                        fill={email.isStarred ? "currentColor" : "none"} 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                      </svg>
-                    </button>
-                    <div className="ml-4 flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className={`text-sm font-medium truncate ${email.isRead ? 'text-foreground' : 'text-foreground font-bold'}`}>
-                          {email.fromAddress || 'Unknown Sender'}
-                        </p>
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm text-foreground">
-                            {new Date(email.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          <button className="text-foreground hover:text-foreground transition-colors duration-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                      <p className={`text-sm truncate ${email.isRead ? 'text-foreground' : 'text-foreground font-medium'}`}>
-                        {email.subject}
-                      </p>
-                      <p className="text-sm text-foreground truncate">
-                        {email.body.substring(0, 100)}...
-                      </p>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to Inbox
+                </button>
+                
+                <h1 className="text-2xl font-bold text-foreground mb-2">{selectedEmail.subject}</h1>
+                
+                <div className="flex items-center justify-between border-b border-foreground pb-4 mb-4">
+                  <div>
+                    <div className="font-medium text-foreground">{selectedEmail.fromAddress || 'Unknown Sender'}</div>
+                    <div className="text-sm text-foreground">
+                      to {selectedEmail.toAddress || 'me'} • {new Date(selectedEmail.createdAt).toLocaleString()}
                     </div>
                   </div>
-                </li>
-              ))}
-              {emails.length === 0 && (
-                <li className="p-8 text-center text-foreground">
-                  <p>No emails found in your inbox.</p>
-                </li>
-              )}
-            </ul>
-          </div>
+                </div>
+                
+                <div className="text-foreground whitespace-pre-wrap">
+                  {selectedEmail.body}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Email List View */
+            <>
+              <div className="mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-foreground">Inbox</h2>
+                    <p className="text-foreground mt-1">
+                      {emails.filter(e => !e.isRead).length} unread messages
+                      {connected && (
+                        <span className="text-green-500 text-sm ml-2">• Live</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Email List */}
+              <div className="bg-card rounded-xl border border-foreground shadow-lg overflow-hidden">
+                {emails.length === 0 ? (
+                  <div className="p-8 text-center text-foreground">
+                    <p>No emails found in your inbox.</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-foreground">
+                    {emails.map((email) => (
+                      <li 
+                        key={email._id} 
+                        className={`p-4 hover:bg-muted cursor-pointer transition-all duration-200 ${
+                          !email.isRead ? 'bg-foreground/5 border-l-4 border-foreground' : ''
+                        }`}
+                        onClick={() => handleEmailSelect(email)}
+                      >
+                        <div className="flex items-start">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className={`text-sm font-medium truncate ${email.isRead ? 'text-foreground' : 'text-foreground font-bold'}`}>
+                                {email.fromAddress || 'Unknown Sender'}
+                              </p>
+                              <p className="text-sm text-foreground whitespace-nowrap ml-2">
+                                {new Date(email.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <p className={`text-sm font-medium truncate mt-1 ${email.isRead ? 'text-foreground' : 'text-foreground font-bold'}`}>
+                              {email.subject}
+                            </p>
+                            <p className="text-sm text-foreground truncate mt-1">
+                              {email.body.substring(0, 120)}...
+                            </p>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
         </main>
       </div>
     </div>
