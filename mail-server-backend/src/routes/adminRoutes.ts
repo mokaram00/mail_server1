@@ -12,7 +12,8 @@ import {
   addDomain, 
   getAccountClassifications, 
   addAccountClassification, 
-  getEmailsByClassification 
+  getEmailsByClassification,
+  createAdmin
 } from '../controllers/adminController';
 import auth from '../middleware/auth';
 
@@ -34,6 +35,9 @@ router.get('/stats', getSystemStats);
 // User creation routes
 router.post('/users', createUser);
 router.post('/users/bulk', bulkCreateUsers);
+
+// Admin creation route
+router.post('/admins', createAdmin);
 
 // Domain management routes
 router.get('/domains', getDomains);

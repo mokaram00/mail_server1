@@ -35,7 +35,6 @@ const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promis
 
       req.user = {
         id: user._id.toString(),
-        role: user.role
       };
       req.admin = undefined; // Ensure admin is not set
     } 

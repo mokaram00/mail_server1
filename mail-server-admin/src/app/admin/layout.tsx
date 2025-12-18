@@ -68,6 +68,8 @@ export default function AdminLayout({
       setActiveTab('emails');
     } else if (pathname?.includes('/admin/settings')) {
       setActiveTab('settings');
+    } else if (pathname?.includes('/admin/admins')) {
+      setActiveTab('admins');
     } else {
       setActiveTab('dashboard');
     }
@@ -288,21 +290,7 @@ export default function AdminLayout({
                 </div>
               )}
             </div>
-            
-            <button
-              onClick={() => router.push('/admin/emails')}
-              className={`w-full flex items-center px-4 py-3 text-base font-medium rounded-lg transition-all duration-200 ${
-                activeTab === 'emails'
-                  ? 'bg-primary text-primary-foreground shadow-md'
-                  : 'text-foreground hover:bg-accent'
-              }`}
-            >
-              <svg className="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              Emails
-            </button>
-            
+        
             <button
               onClick={() => router.push('/admin/settings')}
               className={`w-full flex items-center px-4 py-3 text-base font-medium rounded-lg transition-all duration-200 ${
@@ -316,6 +304,20 @@ export default function AdminLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               Settings
+            </button>
+            
+            <button
+              onClick={() => router.push('/admin/admins')}
+              className={`w-full flex items-center px-4 py-3 text-base font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'admins'
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'text-foreground hover:bg-accent'
+              }`}
+            >
+              <svg className="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Admins
             </button>
           </nav>
         </div>

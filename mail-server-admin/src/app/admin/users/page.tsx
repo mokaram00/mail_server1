@@ -9,7 +9,6 @@ interface User {
   _id: number | string ;
   username: string;
   email: string;
-  role: string;
   isActive: boolean;
   domain?: string;
   isDefaultDomain?: boolean;
@@ -35,7 +34,6 @@ export default function UsersManagement() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showBulkCreateForm, setShowBulkCreateForm] = useState(false);
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
@@ -44,9 +42,9 @@ export default function UsersManagement() {
     isDefaultDomain: false,
     accountClassification: ''
   });
-  const [bulkUsers, setBulkUsers] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<string>('all');
   const [selectedClassification, setSelectedClassification] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>(''); // Add search term state
   const router = useRouter();
 
   // Listen for userCreated event to update the list
@@ -96,42 +94,6 @@ export default function UsersManagement() {
       console.error(err);
     }
   };
-
-  const handleBulkCreateUsers = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setError(null);
-      setSuccess(null);
-      
-      // Parse bulk users from textarea
-      const usersArray = bulkUsers.split('\n')
-        .filter(line => line.trim() !== '')
-        .map(line => {
-          const [username, password, role = 'user', domain = '', accountClassification = ''] = line.split(',');
-          return { username, password, role, domain, accountClassification };
-        });
-      
-      const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/bulk`, { users: usersArray });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create users');
-      }
-      
-      (window as any).addToast(`Successfully created ${data.users.length} users`, 'success');
-      setBulkUsers('');
-      setShowBulkCreateForm(false);
-      
-      // Refresh users list
-      fetchUsers();
-    } catch (err: any) {
-      (window as any).addToast(err.message || 'Failed to create users', 'error');
-      console.error(err);
-    }
-  };
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -174,6 +136,12 @@ export default function UsersManagement() {
       
       const data = await response.json();
       setDomains(data.domains);
+      
+      // Set default domain for new user form
+      const defaultDomain = data.domains.find((d: Domain) => d.isDefault);
+      if (defaultDomain) {
+        setNewUser(prev => ({...prev, domain: defaultDomain.domain}));
+      }
     } catch (err) {
       console.error('Failed to load domains', err);
     }
@@ -195,31 +163,7 @@ export default function UsersManagement() {
   };
 
   const updateUserRole = async (userId: number | string, newRole: string) => {
-    // Debug: Check if userId is valid
-    console.log('Updating user role for ID:', userId);
-    if (!userId) {
-      (window as any).addToast('Invalid user ID', 'error');
-      return;
-    }
-    
-    try {
-      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/role`, { role: newRole });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update user role');
-      }
-      
-      const data = await response.json();
-      // Update user in state
-      setUsers(users.map(user => 
-        user._id === userId ? { ...user, role: data.user.role } : user
-      ));
-      
-      (window as any).addToast('User role updated successfully', 'success');
-    } catch (err) {
-      (window as any).addToast('Failed to update user role', 'error');
-      console.error('Error updating user role:', err);
-    }
+    (window as any).addToast('User roles are no longer supported', 'error');
   };
 
   const updateUserClassification = async (userId: number | string, newClassification: string) => {
@@ -308,11 +252,18 @@ export default function UsersManagement() {
     }
   };
 
-  // Filter users based on selected domain and classification
+  // Filter users based on search term, selected domain and classification
   const filteredUsers = users.filter(user => {
+    // Search filter - check if search term matches username, email, or domain
+    const searchMatch = searchTerm === '' || 
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.domain && user.domain.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.accountClassification && user.accountClassification.toLowerCase().includes(searchTerm.toLowerCase()));
+    
     const domainMatch = selectedDomain === 'all' || user.domain === selectedDomain;
     const classificationMatch = selectedClassification === 'all' || user.accountClassification === selectedClassification;
-    return domainMatch && classificationMatch;
+    
+    return searchMatch && domainMatch && classificationMatch;
   });
 
   if (loading) {
@@ -357,18 +308,6 @@ export default function UsersManagement() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-foreground/80 mb-1">Role</label>
-              <select
-                value={newUser.role}
-                onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            
-            <div>
               <label className="block text-sm font-medium text-foreground/80 mb-1">Domain (optional)</label>
               <select
                 value={newUser.domain}
@@ -382,11 +321,6 @@ export default function UsersManagement() {
                   </option>
                 ))}
               </select>
-              {newUser.domain && !domains.some(d => d.domain === newUser.domain) && (
-                <div className="mt-2 text-sm text-destructive">
-                  Domain does not exist: <strong>{newUser.domain}</strong>
-                </div>
-              )}
             </div>
             
             <div className="md:col-span-2">
@@ -448,15 +382,6 @@ export default function UsersManagement() {
           </button>
           <button 
             onClick={() => {
-              const event = new CustomEvent('openCreateBulkUsersModal');
-              window.dispatchEvent(event);
-            }}
-            className="px-4 py-2 bg-card border border-border rounded-lg hover:bg-accent transition-all duration-200 text-foreground transform hover:scale-105"
-          >
-            Bulk Create Users
-          </button>
-          <button 
-            onClick={() => {
               const event = new CustomEvent('openGenerateEmailsModal');
               window.dispatchEvent(event);
             }}
@@ -469,7 +394,33 @@ export default function UsersManagement() {
 
       {/* Filters */}
       <div className="bg-card rounded-xl shadow-sm border border-border p-6 animate-fadeInSlideUp delay-100">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground/80 mb-1">Search Users</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by username, domain, or classification..."
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200 pr-10"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-2.5 text-foreground/50 hover:text-foreground"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              <svg className="absolute left-3 top-2.5 h-5 w-5 text-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          
           <div>
             <label className="block text-sm font-medium text-foreground/80 mb-1">Filter by Domain</label>
             <select
@@ -522,7 +473,6 @@ export default function UsersManagement() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Email</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Domain</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Classification</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Role</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Status</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -567,15 +517,6 @@ export default function UsersManagement() {
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.role === 'admin' 
-                          ? 'bg-primary/10 text-primary' 
-                          : 'bg-green-500/10 text-green-500'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
                         user.isActive 
                           ? 'bg-green-500/10 text-green-500' 
                           : 'bg-destructive/10 text-destructive'
@@ -585,18 +526,6 @@ export default function UsersManagement() {
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">
-                        <select
-                          value={user.role}
-                          onChange={(e) => {
-                            console.log('Role change for user:', user._id, 'to:', e.target.value);
-                            updateUserRole(user._id, e.target.value);
-                          }}
-                          className="bg-background border border-border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
-                        >
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                        
                         {user.isActive ? (
                           <button
                             onClick={() => {

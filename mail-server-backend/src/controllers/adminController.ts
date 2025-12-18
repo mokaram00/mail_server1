@@ -131,39 +131,7 @@ export const getUserById = async (req: Request, res: Response): Promise<Response
 
 export const updateUserRole = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
-    const { id } = req.params;
-    const { role } = req.body;
-
-    // Validate role
-    if (!role || !['admin', 'user'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role parameter' });
-    }
-
-    // Find user by ID
-    const user = await User.findById(id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Prevent user from changing their own role
-    if (user._id.toString() === req.admin?.id) {
-      return res.status(400).json({ message: 'Cannot change your own role' });
-    }
-
-    // Update user role
-    user.role = role as 'admin' | 'user';
-    await user.save();
-
-    return res.status(200).json({
-      message: 'User role updated successfully',
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-      },
-    });
+    return res.status(400).json({ message: 'User roles are no longer supported' });
   } catch (error) {
     console.error('Update user role error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -278,28 +246,31 @@ export const getSystemStats = async (req: AdminAuthRequest, res: Response): Prom
   }
 };
 
-export const createUser = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
+// Create a new user
+export const createUser = async (req: Request, res: Response): Promise<Response> => {
   try {
-    let { username, email, password, role, domain, isDefaultDomain, accountClassification } = req.body;
-    console.log('Creating user with data:', { username, email, role, domain, isDefaultDomain, accountClassification });
-
-    // Validate input
+    const { username, password, domain, isDefaultDomain, accountClassification } = req.body;
+    
+    console.log('Create user request body:', req.body);
+    
+    // Validate required fields
     if (!username || !password) {
-      console.log('User validation failed: username and password are required');
+      console.log('Validation failed: username and password are required');
       return res.status(400).json({ message: 'Username and password are required' });
     }
-
+    
     // Handle empty strings for domain and accountClassification
-    if (domain === '') domain = null;
-    if (accountClassification === '') accountClassification = null;
-
-    // Automatically generate email if domain is provided and email is not
-    if (domain && domain.trim() !== '' && !email) {
-      email = `${username}@${domain}`;
-      console.log(`Generated email from domain: ${email}`);
-    } else if (domain && domain.trim() !== '' && email && !email.endsWith(`@${domain}`)) {
+    const cleanDomain = domain === '' ? null : domain;
+    const cleanAccountClassification = accountClassification === '' ? null : accountClassification;
+    
+    // Automatically generate email if domain is provided
+    let email = req.body.email;
+    if (cleanDomain && cleanDomain.trim() !== '' && !email) {
+      email = `${username}@${cleanDomain}`;
+      console.log(`Generated email with domain: ${email}`);
+    } else if (cleanDomain && cleanDomain.trim() !== '' && email && !email.endsWith(`@${cleanDomain}`)) {
       // If both email and domain are provided but email doesn't match domain, use the domain
-      email = `${username}@${domain}`;
+      email = `${username}@${cleanDomain}`;
       console.log(`Overrode email with domain-based email: ${email}`);
     }
 
@@ -307,12 +278,6 @@ export const createUser = async (req: AdminAuthRequest, res: Response): Promise<
     if (!email) {
       console.log('Email validation failed: email is required');
       return res.status(400).json({ message: 'Email is required' });
-    }
-
-    // Validate role
-    if (role && !['admin', 'user'].includes(role)) {
-      console.log(`Role validation failed: invalid role ${role}`);
-      return res.status(400).json({ message: 'Invalid role parameter' });
     }
 
     // Check if user already exists
@@ -326,26 +291,26 @@ export const createUser = async (req: AdminAuthRequest, res: Response): Promise<
     }
 
     // Check if the classification exists in the Category collection
-    if (accountClassification && accountClassification.trim() !== '') {
+    if (cleanAccountClassification && cleanAccountClassification.trim() !== '') {
       const existingClassification = await Category.findOne({
-        name: accountClassification
+        name: cleanAccountClassification
       });
 
       if (!existingClassification) {
-        console.log(`Classification ${accountClassification} does not exist`);
-        return res.status(400).json({ message: `Classification '${accountClassification}' does not exist` });
+        console.log(`Classification ${cleanAccountClassification} does not exist`);
+        return res.status(400).json({ message: `Classification '${cleanAccountClassification}' does not exist` });
       }
     }
 
     // Check if the domain exists in the Domain collection
-    if (domain && domain.trim() !== '') {
+    if (cleanDomain && cleanDomain.trim() !== '') {
       const existingDomain = await Domain.findOne({
-        domain: domain
+        domain: cleanDomain
       });
 
       if (!existingDomain) {
-        console.log(`Domain ${domain} does not exist`);
-        return res.status(400).json({ message: `Domain '${domain}' does not exist` });
+        console.log(`Domain ${cleanDomain} does not exist`);
+        return res.status(400).json({ message: `Domain '${cleanDomain}' does not exist` });
       }
     }
 
@@ -359,11 +324,10 @@ export const createUser = async (req: AdminAuthRequest, res: Response): Promise<
       username,
       email,
       password: hashedPassword,
-      role: role || 'user', // Default to 'user' if not specified
       isActive: true, // Default active status
-      domain: domain || null,
+      domain: cleanDomain || null,
       isDefaultDomain: isDefaultDomain || false,
-      accountClassification: accountClassification || null,
+      accountClassification: cleanAccountClassification || null,
     });
     
     await user.save();
@@ -374,7 +338,6 @@ export const createUser = async (req: AdminAuthRequest, res: Response): Promise<
       id: user._id,
       username: user.username,
       email: user.email,
-      role: user.role,
       isActive: user.isActive,
       domain: user.domain,
       accountClassification: user.accountClassification,
@@ -435,15 +398,6 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
           user: user
         });
       }
-
-      // Validate role if provided
-      if (user.role && !['admin', 'user'].includes(user.role)) {
-        console.log(`Role validation failed for user ${user.username}: invalid role ${user.role}`);
-        return res.status(400).json({ 
-          message: 'Invalid role parameter',
-          user: user
-        });
-      }
     }
 
     // Check for existing users
@@ -497,47 +451,112 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
     }
 
     // Hash passwords and prepare user data
-    console.log('Hashing passwords and preparing user data');
     const usersToCreate = [];
     for (const user of users) {
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(user.password, saltRounds);
+      const hashedPassword = await bcrypt.hash(user.password, 10);
       
       usersToCreate.push({
         username: user.username,
         email: user.email,
         password: hashedPassword,
-        role: user.role || 'user',
-        isActive: true,
+        isActive: true, // Default active status
         domain: user.domain || null,
-        isDefaultDomain: user.isDefaultDomain || false,
         accountClassification: user.accountClassification || null,
       });
     }
 
     // Create all users
-    console.log('Creating users');
     const createdUsers = await User.insertMany(usersToCreate);
-    console.log(`Created ${createdUsers.length} users successfully`);
+    console.log(`Successfully created ${createdUsers.length} users`);
 
-    // Return user data without passwords
+    // Return created users without passwords
     const userData = createdUsers.map(user => ({
       id: user._id,
       username: user.username,
       email: user.email,
-      role: user.role,
       isActive: user.isActive,
       domain: user.domain,
-      isDefaultDomain: user.isDefaultDomain,
       accountClassification: user.accountClassification,
     }));
 
     return res.status(201).json({
-      message: `${createdUsers.length} users created successfully`,
+      message: `Successfully created ${createdUsers.length} users`,
       users: userData,
     });
   } catch (error) {
     console.error('Bulk create users error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Create a new admin
+export const createAdmin = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
+  try {
+    const { username, email, password, role } = req.body;
+    
+    console.log('Create admin request body:', req.body);
+    
+    // Validate required fields
+    if (!username || !email || !password) {
+      console.log('Validation failed: username, email, and password are required');
+      return res.status(400).json({ message: 'Username, email, and password are required' });
+    }
+
+    // Validate email format
+    if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/.test(email)) {
+      console.log('Email validation failed: invalid email format');
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Validate role
+    if (role && !['admin', 'superadmin'].includes(role)) {
+      console.log(`Role validation failed: invalid role ${role}`);
+      return res.status(400).json({ message: 'Invalid role parameter' });
+    }
+
+    // Check if admin already exists
+    const existingAdmin = await Admin.findOne({
+      email: email,
+    });
+
+    if (existingAdmin) {
+      console.log(`Admin validation failed: admin with email ${email} already exists`);
+      return res.status(400).json({ message: 'Admin with this email already exists' });
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    console.log('Password hashed successfully');
+
+    // Create admin
+    const admin = new Admin({
+      username,
+      email,
+      password: hashedPassword,
+      role: role || 'admin', // Default to 'admin' if not specified
+      isActive: true, // Default active status
+      permissions: [], // Default empty permissions
+    });
+    
+    await admin.save();
+    console.log(`Admin created successfully with ID: ${admin._id}`);
+
+    // Return admin data without password
+    const adminData = {
+      id: admin._id,
+      username: admin.username,
+      email: admin.email,
+      role: admin.role,
+      isActive: admin.isActive,
+    };
+
+    return res.status(201).json({
+      message: 'Admin created successfully',
+      admin: adminData,
+    });
+  } catch (error) {
+    console.error('Create admin error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
