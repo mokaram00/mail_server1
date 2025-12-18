@@ -22,6 +22,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/socket.io": "^3.0.2",
     "@zone-eu/wildduck": "^1.46.13",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
@@ -37,6 +38,8 @@
     "nodemailer": "^6.9.15",
     "pop3": "^0.2.0",
     "sequelize": "^6.37.3",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {

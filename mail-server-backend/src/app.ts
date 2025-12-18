@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import adminAuthRoutes from './routes/adminAuthRoutes';
+import realTimeEmailRoutes from './routes/realTimeEmailRoutes';
 
 
 dotenv.config();
@@ -33,6 +34,7 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin-auth', adminAuthRoutes);
+app.use('/api/emails', realTimeEmailRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -1,71 +1,137 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '../components/ThemeToggle';
+import apiClient from '../components/apiClient';
+import useWebSocket from '../components/useWebSocket';
+
+interface Email {
+  _id: string;
+  senderId: string;
+  recipientId: string;
+  subject: string;
+  body: string;
+  isRead: boolean;
+  isStarred: boolean;
+  folder: string;
+  messageId?: string;
+  fromAddress?: string;
+  toAddress?: string;
+  receivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function Inbox() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [emails, setEmails] = useState([
-    {
-      id: 1,
-      sender: 'John Doe',
-      subject: 'Meeting Tomorrow',
-      preview: 'Hi there, just confirming our meeting scheduled for tomorrow at 10am...',
-      time: '9:30 AM',
-      read: false,
-      starred: false,
-    },
-    {
-      id: 2,
-      sender: 'Jane Smith',
-      subject: 'Project Update',
-      preview: 'The project is progressing well. Here\'s the latest update on our milestones...',
-      time: 'Yesterday',
-      read: true,
-      starred: true,
-    },
-    {
-      id: 3,
-      sender: 'Tech Newsletter',
-      subject: 'Weekly Digest: Latest Tech News',
-      preview: 'This week\'s top stories include the latest AI developments and cybersecurity trends...',
-      time: 'Dec 15',
-      read: false,
-      starred: false,
-    },
-    {
-      id: 4,
-      sender: 'Michael Johnson',
-      subject: 'Vacation Request',
-      preview: 'I wanted to submit my vacation request for next month. Please let me know...',
-      time: 'Dec 14',
-      read: true,
-      starred: false,
-    },
-    {
-      id: 5,
-      sender: 'Sarah Williams',
-      subject: 'Welcome to the Team!',
-      preview: 'Welcome aboard! We\'re excited to have you join our team. Here\'s what you need to know...',
-      time: 'Dec 12',
-      read: true,
-      starred: true,
-    },
-  ]);
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   
   const router = useRouter();
+  
+  // Initialize WebSocket connection
+  const { socket, connected } = useWebSocket(userId);
+
+  // Fetch user profile and emails when component mounts
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        // Get user profile
+        const profileResponse = await apiClient.getProfile();
+        if (profileResponse.user) {
+          setUserId(profileResponse.user.id);
+        }
+        
+        // Fetch initial emails
+        const emailResponse = await apiClient.getEmails();
+        if (emailResponse.emails) {
+          setEmails(emailResponse.emails);
+        }
+      } catch (err) {
+        setError('Failed to initialize inbox');
+        console.error('Error initializing inbox:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initialize();
+  }, []);
+
+  // Set up WebSocket listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen for new emails
+    socket.on('newEmail', (newEmail: Email) => {
+      console.log('New email received:', newEmail);
+      setEmails(prevEmails => [newEmail, ...prevEmails]);
+    });
+
+    // Clean up listener
+    return () => {
+      socket.off('newEmail');
+    };
+  }, [socket]);
+
+  // Set up periodic email checking
+  useEffect(() => {
+    // Set up interval for real-time checking (every 30 seconds)
+    const interval = setInterval(() => {
+      if (!loading) {
+        apiClient.checkNewEmails().then(response => {
+          if (response.emails) {
+            setEmails(response.emails);
+          }
+        }).catch(err => {
+          console.error('Error checking for new emails:', err);
+        });
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const handleLogout = () => {
-    // In a real application, you would clear the user's session here
-    router.push('/login');
+    apiClient.logout().then(() => {
+      router.push('/login');
+    });
   };
 
-  const toggleStar = (id: number) => {
-    setEmails(emails.map(email => 
-      email.id === id ? { ...email, starred: !email.starred } : email
-    ));
+  const toggleStar = async (id: string) => {
+    try {
+      const email = emails.find(email => email._id === id);
+      if (email) {
+        // In a real implementation, you would update the email on the server
+        setEmails(emails.map(email => 
+          email._id === id ? { ...email, isStarred: !email.isStarred } : email
+        ));
+      }
+    } catch (err) {
+      console.error('Error toggling star:', err);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading emails...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,12 +178,12 @@ export default function Inbox() {
           <nav className="mt-8 px-4">
             <ul className="space-y-2">
               {[
-                { name: 'Inbox', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', count: 5, active: true },
-                { name: 'Drafts', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', count: 2 },
-                { name: 'Saved', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z', count: 8 },
-                { name: 'Snoozed', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', count: 3 },
-                { name: 'Sent', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', count: 24 },
-                { name: 'Trash', icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16', count: 7 }
+                { name: 'Inbox', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', count: emails.filter(e => !e.isRead).length, active: true },
+                { name: 'Drafts', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', count: 0 },
+                { name: 'Saved', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z', count: 0 },
+                { name: 'Snoozed', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', count: 0 },
+                { name: 'Sent', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', count: 0 },
+                { name: 'Trash', icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16', count: 0 }
               ].map((item, index) => (
                 <li key={index} className="animate-fadeInSlideRight" style={{ animationDelay: `${index * 50}ms` }}>
                   <a 
@@ -150,7 +216,10 @@ export default function Inbox() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-bold text-foreground">Inbox</h2>
-                <p className="text-foreground mt-1">5 unread messages</p>
+                <p className="text-foreground mt-1">{emails.filter(e => !e.isRead).length} unread messages</p>
+                {connected && (
+                  <p className="text-green-500 text-sm mt-1">Real-time updates enabled</p>
+                )}
               </div>
               <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-foreground text-background hover:bg-muted h-10 px-4 py-2 hover:scale-[1.02] active:scale-[0.98]">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,9 +235,9 @@ export default function Inbox() {
             <ul className="divide-y divide-foreground">
               {emails.map((email, index) => (
                 <li 
-                  key={email.id} 
+                  key={email._id} 
                   className={`p-4 hover:bg-muted cursor-pointer transition-all duration-300 ${
-                    !email.read ? 'bg-foreground/5 border-l-4 border-foreground' : ''
+                    !email.isRead ? 'bg-foreground/5 border-l-4 border-foreground' : ''
                   } animate-fadeInSlideRight`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
@@ -178,13 +247,13 @@ export default function Inbox() {
                       className="h-4 w-4 text-foreground focus:ring-foreground border-foreground rounded"
                     />
                     <button 
-                      onClick={() => toggleStar(email.id)}
+                      onClick={() => toggleStar(email._id)}
                       className="ml-4 text-foreground hover:text-foreground transition-colors duration-300"
                     >
                       <svg 
                         xmlns="http://www.w3.org/2000/svg" 
-                        className={`h-5 w-5 ${email.starred ? 'text-foreground fill-current' : ''}`} 
-                        fill={email.starred ? "currentColor" : "none"} 
+                        className={`h-5 w-5 ${email.isStarred ? 'text-foreground fill-current' : ''}`} 
+                        fill={email.isStarred ? "currentColor" : "none"} 
                         viewBox="0 0 24 24" 
                         stroke="currentColor"
                       >
@@ -193,12 +262,12 @@ export default function Inbox() {
                     </button>
                     <div className="ml-4 flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className={`text-sm font-medium truncate ${email.read ? 'text-foreground' : 'text-foreground font-bold'}`}>
-                          {email.sender}
+                        <p className={`text-sm font-medium truncate ${email.isRead ? 'text-foreground' : 'text-foreground font-bold'}`}>
+                          {email.fromAddress || 'Unknown Sender'}
                         </p>
                         <div className="flex items-center space-x-2">
                           <p className="text-sm text-foreground">
-                            {email.time}
+                            {new Date(email.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                           <button className="text-foreground hover:text-foreground transition-colors duration-300">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -207,16 +276,21 @@ export default function Inbox() {
                           </button>
                         </div>
                       </div>
-                      <p className={`text-sm truncate ${email.read ? 'text-foreground' : 'text-foreground font-medium'}`}>
+                      <p className={`text-sm truncate ${email.isRead ? 'text-foreground' : 'text-foreground font-medium'}`}>
                         {email.subject}
                       </p>
                       <p className="text-sm text-foreground truncate">
-                        {email.preview}
+                        {email.body.substring(0, 100)}...
                       </p>
                     </div>
                   </div>
                 </li>
               ))}
+              {emails.length === 0 && (
+                <li className="p-8 text-center text-foreground">
+                  <p>No emails found in your inbox.</p>
+                </li>
+              )}
             </ul>
           </div>
         </main>

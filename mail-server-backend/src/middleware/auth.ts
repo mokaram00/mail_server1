@@ -7,7 +7,6 @@ import Admin from '../models/Admin';
 interface AuthRequest extends Request {
   user?: {
     id: string;
-    role: string;
   };
   admin?: {
     id: string;

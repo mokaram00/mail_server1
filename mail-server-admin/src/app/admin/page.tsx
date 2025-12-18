@@ -7,7 +7,6 @@ import { apiClient } from '../utils/apiClient';
 interface Stats {
   totalUsers: number;
   activeUsers: number;
-  totalEmails: number;
   totalAdmins: number;
   activeAdmins: number;
 }
@@ -126,10 +125,6 @@ export default function AdminDashboard() {
         <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-border transform hover:-translate-y-1">
           <div className="p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-foreground/70">Total Emails</p>
-                <p className="text-2xl font-bold mt-1 text-foreground">{stats?.totalEmails || 0}</p>
-              </div>
               <div className="p-2.5 bg-purple-500/10 rounded-lg">
                 <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -137,9 +132,9 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="mt-3">
-              <div className="flex items-center text-xs text-green-600">
+              <div className="flex items-center text-xs text-red-600">
                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                 </svg>
                 <span>3% since last month</span>
               </div>
@@ -296,63 +291,6 @@ export default function AdminDashboard() {
                       </div>
                       <div className="ml-2 text-xs font-medium text-foreground">100%</div>
                     </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-card rounded-xl shadow-sm border border-border animate-fadeInSlideUp delay-200">
-        <div className="p-5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-            <h2 className="text-base font-semibold text-foreground">Recent Activity</h2>
-            <button className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 transform hover:scale-105">
-              View All
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border text-sm">
-              <thead className="bg-accent">
-                <tr>
-                  <th scope="col" className="px-4 py-2 text-left font-medium text-foreground/70 uppercase tracking-wider">Activity</th>
-                  <th scope="col" className="px-4 py-2 text-left font-medium text-foreground/70 uppercase tracking-wider">Users Affected</th>
-                  <th scope="col" className="px-4 py-2 text-left font-medium text-foreground/70 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-4 py-2 text-left font-medium text-foreground/70 uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody className="bg-card divide-y divide-border">
-                <tr className="hover:bg-accent/50 transition-colors duration-150">
-                  <td className="px-4 py-2.5 whitespace-nowrap">
-                    <div className="text-xs font-medium text-foreground">New user registrations</div>
-                  </td>
-                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">+{stats?.totalUsers || 0} users</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">Today</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-green-500/10 text-green-500 rounded-full">Completed</span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-accent/50 transition-colors duration-150">
-                  <td className="px-4 py-2.5 whitespace-nowrap">
-                    <div className="text-xs font-medium text-foreground">Email delivery</div>
-                  </td>
-                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">+{stats?.totalEmails || 0} emails</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">Today</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-green-500/10 text-green-500 rounded-full">Completed</span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-accent/50 transition-colors duration-150">
-                  <td className="px-4 py-2.5 whitespace-nowrap">
-                    <div className="text-xs font-medium text-foreground">System maintenance</div>
-                  </td>
-                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">All users</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap text-foreground/70">Yesterday</td>
-                  <td className="px-4 py-2.5 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-yellow-500/10 text-yellow-500 rounded-full">Pending</span>
                   </td>
                 </tr>
               </tbody>
