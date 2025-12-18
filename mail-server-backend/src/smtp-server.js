@@ -41,7 +41,7 @@ const server = new SMTPServer({
       .then(async parsed => {
         const from = parsed.from?.text || '';
         const subject = parsed.subject || '(No subject)';
-        const body = parsed.text || parsed.html || '';
+        const body = parsed.html || parsed.text || '';
 
         // Try to find the sender user in the database
         let senderUser = null;

@@ -12,7 +12,6 @@ import {
   addDomain, 
   getAccountClassifications, 
   addAccountClassification, 
-  getEmailsByClassification,
   createAdmin
 } from '../controllers/adminController';
 import auth from '../middleware/auth';
@@ -44,6 +43,5 @@ router.post('/domains', addDomain);
 // Account classification routes
 router.get('/classifications', getAccountClassifications);
 router.post('/classifications', addAccountClassification);
-router.get('/classifications/:classification/emails', getEmailsByClassification);
 
 export default router;
