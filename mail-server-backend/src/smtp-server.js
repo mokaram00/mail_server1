@@ -2,8 +2,8 @@
 
 const { SMTPServer } = require('smtp-server');
 const { simpleParser } = require('mailparser');
-const User = require('./models/User');
-const Email = require('./models/Email');
+const User = require('./models/User').default;  // Access the default export
+const Email = require('./models/Email').default;  // Access the default export
 
 const MAIL_DOMAIN = process.env.MAIL_DOMAIN || 'example.com';
 
