@@ -49,7 +49,18 @@ export default function UsersManagement() {
   const [selectedClassification, setSelectedClassification] = useState<string>('all');
   const router = useRouter();
 
-  // Removed local event listener as we're using global modals now
+  // Listen for userCreated event to update the list
+  useEffect(() => {
+    const handleUserCreated = () => {
+      fetchUsers();
+    };
+
+    window.addEventListener('userCreated', handleUserCreated);
+
+    return () => {
+      window.removeEventListener('userCreated', handleUserCreated);
+    };
+  }, []);
 
   // Fetch users, domains and classifications
   useEffect(() => {
@@ -495,8 +506,8 @@ export default function UsersManagement() {
 
       {/* Users Table */}
       <div className="bg-card rounded-xl shadow-sm border border-border animate-fadeInSlideUp delay-150">
-        <div className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-foreground">Users List</h2>
             <p className="text-sm text-foreground/70">
               Showing {filteredUsers.length} of {users.length} users
@@ -507,43 +518,43 @@ export default function UsersManagement() {
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-accent">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Username</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Domain</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Classification</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Username</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Email</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Domain</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Classification</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Role</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-card divide-y divide-border">
                 {filteredUsers.map((user) => (
                   <tr key={user._id} className="hover:bg-accent/50 transition-colors duration-150">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-foreground"> {user.username}</div>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="font-medium text-foreground text-sm"> {user.username}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-foreground/70">{user.username}@{user.domain}</div>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-foreground/70 text-sm">{user.username}@{user.domain}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-foreground/70">
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-foreground/70 text-sm">
                         {user.domain || '-'}
                         {user.isDefaultDomain && (
-                          <span className="ml-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
+                          <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
                             Default
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="flex items-center">
                         <select
                           value={user.accountClassification || ''}
                           onChange={(e) => {
                             console.log('Classification change for user:', user._id, 'to:', e.target.value);
                             updateUserClassification(user._id, e.target.value);
                           }}
-                          className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                          className="bg-background border border-border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
                         >
                           <option value="">No Classification</option>
                           {classifications.map((classification) => (
@@ -554,8 +565,8 @@ export default function UsersManagement() {
                         </select>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
                         user.role === 'admin' 
                           ? 'bg-primary/10 text-primary' 
                           : 'bg-green-500/10 text-green-500'
@@ -563,8 +574,8 @@ export default function UsersManagement() {
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
                         user.isActive 
                           ? 'bg-green-500/10 text-green-500' 
                           : 'bg-destructive/10 text-destructive'
@@ -572,15 +583,15 @@ export default function UsersManagement() {
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex flex-wrap gap-2">
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="flex flex-wrap gap-1">
                         <select
                           value={user.role}
                           onChange={(e) => {
                             console.log('Role change for user:', user._id, 'to:', e.target.value);
                             updateUserRole(user._id, e.target.value);
                           }}
-                          className="bg-background border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                          className="bg-background border border-border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
                         >
                           <option value="user">User</option>
                           <option value="admin">Admin</option>
@@ -592,16 +603,22 @@ export default function UsersManagement() {
                               console.log('Deactivating user:', user._id);
                               deactivateUser(user._id);
                             }}
-                            className="px-3 py-1 bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-all duration-200 transform hover:scale-105"
+                            className="p-1 text-destructive hover:bg-destructive/20 rounded transition-colors duration-200"
+                            title="Deactivate user"
                           >
-                            Deactivate
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                            </svg>
                           </button>
                         ) : (
                           <button
                             disabled
-                            className="px-3 py-1 bg-border text-foreground/50 rounded cursor-not-allowed"
+                            className="p-1 text-foreground/50 cursor-not-allowed"
+                            title="Inactive user"
                           >
-                            Inactive
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                            </svg>
                           </button>
                         )}
                         
@@ -610,9 +627,12 @@ export default function UsersManagement() {
                             // Open email login for this user
                             window.open(`/login?email=${encodeURIComponent(user.email)}`, '_blank');
                           }}
-                          className="px-3 py-1 bg-purple-500/10 text-purple-500 rounded hover:bg-purple-500/20 transition-all duration-200 transform hover:scale-105"
+                          className="p-1 text-purple-500 hover:bg-purple-500/20 rounded transition-colors duration-200"
+                          title="Login as user"
                         >
-                          Login
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                          </svg>
                         </button>
                         
                         <button
@@ -620,9 +640,12 @@ export default function UsersManagement() {
                             // Open inbox for this user
                             window.open(`/inbox?user=${user._id}`, '_blank');
                           }}
-                          className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded hover:bg-indigo-500/20 transition-all duration-200 transform hover:scale-105"
+                          className="p-1 text-indigo-500 hover:bg-indigo-500/20 rounded transition-colors duration-200"
+                          title="View inbox"
                         >
-                          Inbox
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                          </svg>
                         </button>
                         
                         <button
@@ -630,9 +653,13 @@ export default function UsersManagement() {
                             console.log('Showing password for user:', user._id);
                             showUserPassword(user._id);
                           }}
-                          className="px-3 py-1 bg-yellow-500/10 text-yellow-500 rounded hover:bg-yellow-500/20 transition-all duration-200 transform hover:scale-105"
+                          className="p-1 text-yellow-500 hover:bg-yellow-500/20 rounded transition-colors duration-200"
+                          title="Show password"
                         >
-                          Show Pass
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -642,7 +669,7 @@ export default function UsersManagement() {
             </table>
             
             {filteredUsers.length === 0 && (
-              <div className="text-center py-12 text-foreground/50">
+              <div className="text-center py-8 text-foreground/50">
                 No users found
               </div>
             )}

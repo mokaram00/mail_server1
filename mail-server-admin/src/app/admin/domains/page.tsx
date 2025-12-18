@@ -19,7 +19,18 @@ export default function DomainsManagement() {
   const [showAddDomainForm, setShowAddDomainForm] = useState(false);
   const router = useRouter();
 
-  // Removed local event listener as we're using global modals now
+  // Listen for domainCreated event to update the list
+  useEffect(() => {
+    const handleDomainCreated = () => {
+      fetchDomains();
+    };
+
+    window.addEventListener('domainCreated', handleDomainCreated);
+
+    return () => {
+      window.removeEventListener('domainCreated', handleDomainCreated);
+    };
+  }, []);
 
   // Fetch domains
   useEffect(() => {

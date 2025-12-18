@@ -343,7 +343,7 @@ export default function AdminLayout({
                 <input
                   type="text"
                   placeholder="Search..."
-                  className="w-48 rounded-lg border border-border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground transition-all duration-200"
+                  className="w-48 md:w-48 rounded-lg border border-border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground transition-all duration-200 max-w-[120px] md:max-w-none"
                 />
                 <svg className="absolute right-3 top-2.5 h-5 w-5 text-foreground/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

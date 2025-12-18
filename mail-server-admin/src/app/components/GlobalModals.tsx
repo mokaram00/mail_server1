@@ -170,10 +170,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
       (window as any).addToast(`Successfully created ${generatedUsers.length} users`, 'success');
       closeModal();
       
-      // Refresh the current page if it's the users page
-      if (window.location.pathname === '/admin/users') {
-        window.location.reload();
-      }
+      // Dispatch event to update users list
+      window.dispatchEvent(new CustomEvent('userCreated'));
     } catch (err: any) {
       (window as any).addToast(err.message || 'Failed to create users', 'error');
       setError(err.message || 'Failed to create users');
@@ -234,10 +232,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
             (window as any).addToast('User created successfully', 'success');
             closeModal();
             
-            // Refresh the current page if it's the users page
-            if (window.location.pathname === '/admin/users') {
-              window.location.reload();
-            }
+            // Dispatch event to update users list
+            window.dispatchEvent(new CustomEvent('userCreated'));
           } catch (err: any) {
             (window as any).addToast(err.message || 'Failed to create user', 'error');
             setError(err.message || 'Failed to create user');
@@ -628,10 +624,8 @@ jane,password456,admin,test.com,"
             (window as any).addToast(data.message || 'Domain added successfully', 'success');
             closeModal();
             
-            // Refresh the current page if it's the domains page
-            if (window.location.pathname === '/admin/domains') {
-              window.location.reload();
-            }
+            // Dispatch event to update domains list
+            window.dispatchEvent(new CustomEvent('domainCreated'));
           } catch (err: any) {
             (window as any).addToast(err.message || 'Failed to add domain', 'error');
             setError(err.message || 'Failed to add domain');
@@ -699,10 +693,8 @@ jane,password456,admin,test.com,"
             (window as any).addToast(data.message || 'Classification added successfully', 'success');
             closeModal();
             
-            // Refresh the current page if it's the classifications page
-            if (window.location.pathname === '/admin/classifications') {
-              window.location.reload();
-            }
+            // Dispatch event to update classifications list
+            window.dispatchEvent(new CustomEvent('classificationCreated'));
           } catch (err: any) {
             (window as any).addToast(err.message || 'Failed to add classification', 'error');
             setError(err.message || 'Failed to add classification');

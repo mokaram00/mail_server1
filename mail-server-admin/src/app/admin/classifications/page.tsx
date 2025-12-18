@@ -15,7 +15,19 @@ export default function ClassificationsManagement() {
   const [showAddClassificationForm, setShowAddClassificationForm] = useState(false);
   const router = useRouter();
 
-  // Removed local event listener as we're using global modals now
+  // Listen for classificationCreated event to update the list
+  useEffect(() => {
+    const handleClassificationCreated = () => {
+      fetchClassifications();
+      fetchUsersByClassification();
+    };
+
+    window.addEventListener('classificationCreated', handleClassificationCreated);
+
+    return () => {
+      window.removeEventListener('classificationCreated', handleClassificationCreated);
+    };
+  }, []);
 
   // Fetch classifications and user counts
   useEffect(() => {
