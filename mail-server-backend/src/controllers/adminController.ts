@@ -691,32 +691,6 @@ export const addAccountClassification = async (req: Request, res: Response): Pro
   }
 };
 
-// Get user password by ID
-export const getUserPassword = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
-  try {
-    // Check if admin is authenticated
-    if (!req.admin) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    const { id } = req.params;
-
-    // Find user by ID
-    const user = await User.findById(id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Return the user's password
-    return res.status(200).json({
-      password: user.password,
-    });
-  } catch (error) {
-    console.error('Get user password error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-};
 // Get emails by classification
 export const getEmailsByClassification = async (req: Request, res: Response): Promise<Response> => {  
   try {
@@ -757,12 +731,13 @@ export const getEmailsByClassification = async (req: Request, res: Response): Pr
 
     console.log(`Found ${users.length} users with classification ${classification}`);
 
+    // Return users with plain text passwords
     return res.status(200).json({
       users: users.map(user => ({
         id: user._id,
         username: user.username,
         email: user.email,
-        password: user.password, // Include actual password as requested
+        password: user.password, // Plain text password
         domain: user.domain
       }))
     });

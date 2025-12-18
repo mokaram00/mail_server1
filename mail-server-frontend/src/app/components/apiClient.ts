@@ -83,6 +83,25 @@ class ApiClient {
     });
   }
 
+  // Magic link methods
+  async generateMagicLink(email: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/magic-link/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
   // Email methods
   async getEmails(): Promise<ApiResponse<Email>> {
     return this.request<Email>('/api/emails');

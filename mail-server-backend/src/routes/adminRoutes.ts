@@ -13,8 +13,7 @@ import {
   getAccountClassifications, 
   addAccountClassification, 
   getEmailsByClassification,
-  createAdmin,
-  getUserPassword
+  createAdmin
 } from '../controllers/adminController';
 import auth from '../middleware/auth';
 const router = express.Router();
@@ -25,7 +24,6 @@ router.use(auth);
 // User management routes
 router.get('/users', getUsers);
 router.get('/users/:id', getUserById);
-router.get('/users/:id/password', getUserPassword);
 router.put('/users/:id/role', updateUserRole);
 router.put('/users/:id/classification', updateUserClassification);
 router.put('/users/:id/deactivate', deactivateUser);

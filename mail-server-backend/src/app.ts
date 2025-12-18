@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import adminAuthRoutes from './routes/adminAuthRoutes';
 import realTimeEmailRoutes from './routes/realTimeEmailRoutes';
+import magicLinkRoutes from './routes/magicLinkRoutes';
 
 
 dotenv.config();
@@ -42,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/emails', realTimeEmailRoutes);
+app.use('/api/magic', magicLinkRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
