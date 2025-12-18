@@ -13,11 +13,18 @@ dotenv.config();
 
 // Create Express app
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 
-// CORS configuration to allow credentials
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) {
+    const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : []; // Split by commas if there are multiple URLs
+    if (allowedOrigins.indexOf(origin || '') !== -1 || !origin) {
+      // If the origin matches any in the allowed list (or if no origin is provided, e.g., for Postman)
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'), false);
+    }
+  },
   credentials: true, // Allow cookies to be sent with requests
   optionsSuccessStatus: 200
 };
