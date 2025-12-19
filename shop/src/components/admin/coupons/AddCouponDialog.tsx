@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useLanguage } from '@/lib/language-context';
 
 interface Coupon {
   _id: string;
@@ -25,7 +24,6 @@ interface AddCouponDialogProps {
 }
 
 export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setErrorMessage, setSuccessMessage }: AddCouponDialogProps) {
-  const { t } = useLanguage();
   const [couponForm, setCouponForm] = useState<{
     code: string;
     discountType: 'percentage' | 'fixed';
@@ -57,29 +55,29 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
     const newErrors: {[key: string]: string} = {};
 
     if (!couponForm.code.trim()) {
-      newErrors.code = t('couponCodeRequired');
+      newErrors.code = 'Coupon code is required';
     } else if (couponForm.code.trim().length < 3) {
-      newErrors.codeLength = t('couponCodeLength');
+      newErrors.codeLength = 'Coupon code must be at least 3 characters';
     }
 
     if (!couponForm.discountValue || parseFloat(couponForm.discountValue) <= 0) {
-      newErrors.discountValue = t('couponDiscountRequired');
+      newErrors.discountValue = 'Discount value must be greater than 0';
     }
 
     if (couponForm.discountType === 'percentage' && parseFloat(couponForm.discountValue) > 100) {
-      newErrors.discountValue = t('couponDiscountPercentage');
+      newErrors.discountValue = 'Percentage discount cannot exceed 100%';
     }
 
     if (!couponForm.startDate) {
-      newErrors.startDate = t('couponStartDateRequired');
+      newErrors.startDate = 'Start date is required';
     }
 
     if (!couponForm.endDate) {
-      newErrors.endDate = t('couponEndDateRequired');
+      newErrors.endDate = 'End date is required';
     }
 
     if (!couponForm.usageLimit || parseInt(couponForm.usageLimit) <= 0) {
-      newErrors.usageLimit = t('couponUsageLimit');
+      newErrors.usageLimit = 'Usage limit must be greater than 0';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -89,7 +87,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
 
     const token = localStorage.getItem('access_token');
     if (!token) {
-      alert('يجب تسجيل الدخول أولاً');
+      alert('You must log in first');
       return;
     }
 
@@ -104,13 +102,13 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
       });
 
       if (!response.ok) {
-        setErrorMessage(t('unauthorized'));
+        setErrorMessage('Unauthorized access');
         return;
       }
 
       const data = await response.json();
       if (data.user.role !== 'admin') {
-        setErrorMessage(t('unauthorized'));
+        setErrorMessage('Unauthorized access');
         return;
       }
 
@@ -134,7 +132,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
 
       await onAddCoupon(event, couponData);
     } catch (error: any) {
-      console.error('خطأ في إرسال البيانات:', error);
+      console.error('Error sending data:', error);
       
       // Handle validation errors from server
       if (error.message?.includes('validation failed') || error.name === 'ValidationError') {
@@ -143,7 +141,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
           if (errorData.errors) {
             const serverErrors: {[key: string]: string} = {};
             Object.keys(errorData.errors).forEach(field => {
-              serverErrors[field] = errorData.errors[field].message || `خطأ في ${field}`;
+              serverErrors[field] = errorData.errors[field].message || `Error in ${field}`;
             });
             setErrors(serverErrors);
             return;
@@ -179,13 +177,13 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-xl font-bold text-gray-900">{t('admin.addCoupon')}</h3>
+          <h3 className="text-xl font-bold text-gray-900">Add New Coupon</h3>
         </div>
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.couponCode')}
+                Coupon Code
               </label>
               <input
                 type="text"
@@ -194,7 +192,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
                 className={`w-full px-4 py-3 border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black bg-white text-gray-900 placeholder-gray-500 transition-all duration-300 ${
                   errors.code ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'
                 }`}
-                placeholder={t('admin.couponCodePlaceholder')}
+                placeholder="Enter coupon code"
               />
               {errors.code && (
                 <p className="mt-1 text-sm text-red-600">{errors.code}</p>
@@ -202,7 +200,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.discountType')}
+                Discount Type
               </label>
               <select
                 value={couponForm.discountType}
@@ -211,8 +209,8 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
                   errors.discountType ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'
                 }`}
               >
-                <option value="percentage">{t('admin.percentageDiscount')}</option>
-                <option value="fixed">{t('admin.fixedDiscount')}</option>
+                <option value="percentage">Percentage Discount</option>
+                <option value="fixed">Fixed Amount Discount</option>
               </select>
               {errors.discountType && (
                 <p className="mt-1 text-sm text-red-600">{errors.discountType}</p>
@@ -220,7 +218,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.discountValue')}
+                Discount Value
               </label>
               <div className="relative">
                 <input
@@ -235,7 +233,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
                   placeholder={couponForm.discountType === 'percentage' ? '10' : '50.00'}
                 />
                 <span className="absolute right-4 top-3 text-gray-500">
-                  {couponForm.discountType === 'percentage' ? '%' : 'ر.س'}
+                  {couponForm.discountType === 'percentage' ? '%' : '$'}
                 </span>
               </div>
               {errors.discountValue && (
@@ -244,7 +242,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.startDate')}
+                Start Date
               </label>
               <input
                 type="date"
@@ -260,7 +258,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.endDate')}
+                End Date
               </label>
               <input
                 type="date"
@@ -276,7 +274,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.usageLimit')}
+                Usage Limit
               </label>
               <input
                 type="number"
@@ -286,7 +284,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
                 className={`w-full px-4 py-3 border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black bg-white text-gray-900 placeholder-gray-500 transition-all duration-300 ${
                   errors.usageLimit ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'
                 }`}
-                placeholder={t('admin.usageLimitPlaceholder')}
+                placeholder="Enter usage limit"
               />
               {errors.usageLimit && (
                 <p className="mt-1 text-sm text-red-600">{errors.usageLimit}</p>
@@ -301,7 +299,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
                   className="rounded border-2 border-gray-300 text-black focus:ring-black focus:ring-2"
                 />
                 <span className="mr-2 text-sm font-medium text-gray-900">
-                  {t('admin.couponActive')}
+                  Active Coupon
                 </span>
               </label>
             </div>
@@ -312,7 +310,7 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
               onClick={handleClose}
               className="px-6 py-3 border-2 border-gray-300 rounded-2xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-300"
             >
-              {t('common.cancel')}
+              Cancel
             </button>
             <button
               type="submit"
@@ -326,10 +324,10 @@ export default function AddCouponDialog({ isOpen, onClose, onAddCoupon, setError
               {isCreatingCoupon ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block ml-2"></div>
-                  {t('admin.creatingCoupon')}
+                  Adding Coupon...
                 </>
               ) : (
-                t('admin.addCoupon')
+                'Add Coupon'
               )}
             </button>
           </div>

@@ -1,6 +1,5 @@
 'use client';
 
-import { useLanguage } from '@/lib/language-context';
 import { useState, useEffect } from 'react';
 import AddProductDialog from '@/components/admin/AddProductDialog';
 import EditProductDialog from '@/components/admin/EditProductDialog';
@@ -37,7 +36,6 @@ interface Coupon {
 }
 
 export default function AdminDashboard() {
-  const { t } = useLanguage();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
@@ -175,15 +173,15 @@ export default function AdminDashboard() {
           loadInitialData();
         } else {
           console.log('❌ User is not admin');
-          setErrorMessage(t('unauthorized'));
+          setErrorMessage('Unauthorized access');
         }
       } else {
         console.log('❌ Auth failed');
-        setErrorMessage(t('identityVerificationFailed'));
+        setErrorMessage('Identity verification failed');
       }
     } catch (error) {
       console.error('❌ Error in auth check:', error);
-      setErrorMessage(t('identityVerificationFailed'));
+      setErrorMessage('Identity verification failed');
     } finally {
       console.log('🔄 Setting authLoading to false and loading to false');
       // Add minimum delay to ensure loading is visible
@@ -288,7 +286,7 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('خطأ في تحميل الكوبونات:', error);
-      setErrorMessage(t('serverError'));
+      setErrorMessage('Server error occurred');
     } finally {
       setCouponsLoading(false);
     }

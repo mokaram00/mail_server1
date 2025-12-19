@@ -2,14 +2,12 @@
 
 import Link from 'next/link';
 import { useCart } from '@/lib/cart-context';
-import { useLanguage } from '@/lib/language-context';
 import { useAuth } from '@/lib/auth-context';
 import { useState } from 'react';
 import { FaShoppingCart, FaWrench, FaUniversity, FaCheckCircle } from 'react-icons/fa';
 
 export default function CartPage() {
   const { state, removeItem, updateQuantity, clearCart } = useCart();
-  const { t } = useLanguage();
   const { user, loading: authLoading } = useAuth();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const selectedPaymentMethod = 'polar';
@@ -20,7 +18,7 @@ export default function CartPage() {
       nameEn: 'Polar Checkout',
       icon: FaCheckCircle,
       color: 'from-green-600 to-green-700',
-      description: 'الدفع الآمن عبر Polar'
+      description: 'Secure payment via Polar'
     }
   ];
 
@@ -46,7 +44,7 @@ export default function CartPage() {
       if (response.ok) {
         const { url } = await response.json();
         // Show user feedback before opening Polar Checkout
-        alert('سيتم فتح صفحة Polar Checkout في نافذة منبثقة...');
+        alert('Opening Polar Checkout in a popup window...');
         // Open Polar Checkout in popup window
         const popup = window.open(
           url,
@@ -56,16 +54,16 @@ export default function CartPage() {
 
         // Check if popup was blocked
         if (!popup) {
-          alert('تم حظر النافذة المنبثقة. يرجى السماح للنوافذ المنبثقة لهذا الموقع.');
+          alert('Popup window was blocked. Please allow popups for this site.');
           // Fallback to new tab
           window.open(url, '_blank');
         }
       } else {
-        alert(t('cart.errorCheckout') || 'Error creating checkout session');
+        alert('Error creating checkout session');
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert(t('cart.errorServer') || 'Server error occurred');
+      alert('Server error occurred');
     } finally {
       setIsCheckingOut(false);
     }
@@ -77,7 +75,7 @@ export default function CartPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري التحقق من تسجيل الدخول...</p>
+          <p className="text-gray-600">Checking authentication...</p>
         </div>
       </div>
     );
@@ -90,24 +88,24 @@ export default function CartPage() {
         <div className="text-center max-w-md mx-auto px-6">
           <FaShoppingCart className="text-gray-400 text-8xl mb-6" />
           <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent mb-4">
-            يرجى تسجيل الدخول
+            Please log in
           </h1>
           <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-            يجب أن تكون مسجلاً في حسابك للوصول إلى السلة والتسوق
+            You need to be logged in to access your cart and shop
           </p>
           <div className="space-y-4">
             <Link
               href="/login"
               className="inline-block bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-semibold shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300"
             >
-              تسجيل الدخول
+              Log in
             </Link>
             <div>
               <Link
                 href="/register"
                 className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors duration-200"
               >
-                ليس لديك حساب؟ سجل الآن
+                Don't have an account? Register now
               </Link>
             </div>
           </div>
@@ -122,16 +120,16 @@ export default function CartPage() {
         <div className="text-center max-w-md mx-auto px-6">
           <FaShoppingCart className="text-gray-400 text-8xl mb-6" />
           <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent mb-4">
-            {t('cart.empty')}
+            Your cart is empty
           </h1>
           <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-            {t('cart.emptyDesc')}
+            Looks like you haven't added any items to your cart yet
           </p>
           <Link
             href="/products"
             className="inline-block bg-gradient-to-r from-black to-gray-800 text-white px-8 py-4 rounded-2xl text-lg font-semibold shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300"
           >
-            {t('cart.continueShopping')}
+            Continue Shopping
           </Link>
         </div>
       </div>
@@ -144,13 +142,13 @@ export default function CartPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent">
-            {t('cart.title')} ({state.itemCount} {state.itemCount === 1 ? t('cart.item') : t('cart.items')})
+            Shopping Cart ({state.itemCount} {state.itemCount === 1 ? 'item' : 'items'})
           </h1>
           <button
             onClick={clearCart}
             className="bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-lg hover:bg-red-100 hover:border-red-300 transition-all duration-300 text-xs font-medium"
           >
-            {t('cart.clearCart') || 'Clear Cart'}
+            Clear Cart
           </button>
         </div>
 
@@ -159,7 +157,7 @@ export default function CartPage() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
               <div className="p-4 border-b border-gray-100">
-                <h2 className="text-lg font-bold text-gray-900">{t('cart.products') || 'Products'}</h2>
+                <h2 className="text-lg font-bold text-gray-900">Products</h2>
               </div>
               <div className="divide-y divide-gray-100">
                 {state.items.map((item) => (
@@ -186,10 +184,10 @@ export default function CartPage() {
                           {item.name}
                         </h3>
                         <p className="text-gray-600 text-sm mb-2">
-                          ${item.price} {t('common.price')}
+                          ${item.price} USD
                         </p>
                         <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                          <span className="text-xs text-gray-500">{t('cart.quantity')}:</span>
+                          <span className="text-xs text-gray-500">Quantity:</span>
                           <div className="flex items-center space-x-2 rtl:space-x-reverse">
                             <button
                               onClick={() => updateQuantity(item._id, item.quantity - 1)}
@@ -219,7 +217,7 @@ export default function CartPage() {
                           onClick={() => removeItem(item._id)}
                           className="text-red-500 hover:text-red-700 text-xs font-medium transition-colors duration-200"
                         >
-                          {t('cart.remove')}
+                          Remove
                         </button>
                       </div>
                     </div>
@@ -232,16 +230,16 @@ export default function CartPage() {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sticky top-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">{t('cart.orderSummary')}</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h2>
 
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{t('cart.subtotal')}:</span>
+                  <span className="text-gray-600">Subtotal:</span>
                   <span className="font-medium">${state.total.toFixed(2)}</span>
                 </div>
                 <div className="border-t pt-3">
                   <div className="flex justify-between text-lg font-bold">
-                    <span>{t('cart.total')}:</span>
+                    <span>Total:</span>
                     <span className="bg-gradient-to-r from-black to-gray-800 bg-clip-text text-transparent">
                       ${state.total.toFixed(2)}
                     </span>
@@ -251,7 +249,7 @@ export default function CartPage() {
 
               {/* Payment Methods Section */}
               <div className="mb-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('cart.paymentMethods')}</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Methods</h3>
                 <div className="space-y-2">
                   {paymentMethods.map((method) => {
                     const Icon = method.icon;
@@ -289,7 +287,7 @@ export default function CartPage() {
                 disabled={isCheckingOut}
                 className="w-full bg-gradient-to-r from-black to-gray-800 text-white py-3 rounded-xl text-sm font-semibold shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300 disabled:bg-gray-400 disabled:transform-none"
               >
-                {isCheckingOut ? (t('cart.processing') || 'جاري المعالجة...') : 'ادفع عبر Polar'}
+                {isCheckingOut ? 'Processing...' : 'Pay with Polar'}
               </button>
 
               <div className="mt-4 text-center">
@@ -297,7 +295,7 @@ export default function CartPage() {
                   href="/products"
                   className="text-gray-600 hover:text-black text-xs font-medium transition-colors duration-200"
                 >
-                  {t('cart.continueShopping')}
+                  Continue Shopping
                 </Link>
               </div>
             </div>

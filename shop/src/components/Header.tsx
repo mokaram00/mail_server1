@@ -2,14 +2,12 @@
 
 import Link from 'next/link';
 import { useCart } from '@/lib/cart-context';
-import { useLanguage } from '@/lib/language-context';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, isAuthenticated, signOut } from '@/lib/auth-utils';
 
 export default function Header() {
   const { state } = useCart();
-  const { language, setLanguage, t } = useLanguage();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -74,10 +72,6 @@ export default function Header() {
     };
   }, [isUserMenuOpen]);
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'ar' ? 'en' : 'ar');
-  };
-
   const closeUserMenu = () => {
     setIsUserMenuOpen(false);
   };
@@ -91,7 +85,7 @@ export default function Header() {
       // Use client-side navigation instead of page reload
       router.push('/');
     } catch (error) {
-      console.error('خطأ في تسجيل الخروج:', error);
+      console.error('Error logging out:', error);
       // Fallback to manual cleanup
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
@@ -162,32 +156,22 @@ export default function Header() {
           <nav className="hidden md:flex items-center space-x-8 rtl:space-x-reverse">
             <Link href="/" className="relative group py-2">
               <span className="text-white hover:text-gray-300 transition-colors duration-300 font-medium relative">
-                {t('nav.home')}
+                Home
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-white to-gray-300 group-hover:w-full transition-all duration-300"></div>
               </span>
             </Link>
             <Link href="/products" className="relative group py-2">
               <span className="text-white hover:text-gray-300 transition-colors duration-300 font-medium relative">
-                {t('nav.products')}
+                Products
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-white to-gray-300 group-hover:w-full transition-all duration-300"></div>
               </span>
             </Link>
             <Link href="/contact" className="relative group py-2">
               <span className="text-white hover:text-gray-300 transition-colors duration-300 font-medium relative">
-                {t('nav.contact')}
+                Contact
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-white to-gray-300 group-hover:w-full transition-all duration-300"></div>
               </span>
             </Link>
-
-            {/* Language Toggle */}
-            <button
-              onClick={toggleLanguage}
-              className="relative group bg-white/5 backdrop-blur-sm border border-white/10 rounded-full px-4 py-2 hover:bg-white/10 transition-all duration-300 transform hover:scale-105"
-            >
-              <span className="text-white font-medium text-sm">
-                {language === 'ar' ? 'EN' : 'العربية'}
-              </span>
-            </button>
 
             {/* Authentication Section */}
             {isAuth ? (
@@ -203,7 +187,7 @@ export default function Header() {
                         {user?.fullName?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <span className="font-medium text-sm">{user?.fullName || user?.name || 'المستخدم'}</span>
+                    <span className="font-medium text-sm">{user?.fullName || user?.name || 'User'}</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
@@ -213,20 +197,20 @@ export default function Header() {
                   {isUserMenuOpen && (
                     <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-[100]">
                       <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">{user?.fullName || user?.name || 'المستخدم'}</p>
+                        <p className="text-sm font-medium text-gray-900">{user?.fullName || user?.name || 'User'}</p>
                         <p className="text-sm text-gray-500">{user?.email}</p>
                       </div>
 
                       <div className="py-1">
                         <Link href="/profile" onClick={closeUserMenu} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                          {t('nav.profile')}
+                          Profile
                         </Link>
                         <Link href="/orders" onClick={closeUserMenu} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                          {t('nav.orders')}
+                          Orders
                         </Link>
                         {user?.role === 'admin' && (
                           <Link href="/admin" onClick={closeUserMenu} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                            {t('nav.admin')}
+                            Dashboard
                           </Link>
                         )}
                       </div>
@@ -239,7 +223,7 @@ export default function Header() {
                           }}
                           className="block w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
                         >
-                          {t('nav.logout')}
+                          Logout
                         </button>
                       </div>
                     </div>
@@ -270,7 +254,7 @@ export default function Header() {
                         </div>
                       )}
                     </div>
-                    <span className="font-medium text-sm">{t('nav.cart')}</span>
+                    <span className="font-medium text-sm">Cart</span>
                   </div>
                 </Link>
               </>
@@ -278,10 +262,10 @@ export default function Header() {
               /* Authentication Buttons */
               <div className="flex items-center space-x-4 rtl:space-x-reverse">
                 <Link href="/login" className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all duration-300 transform hover:scale-105">
-                {t('nav.login')}
+                Login
                 </Link>
                 <Link href="/register" className="bg-gradient-to-r from-white to-gray-200 text-black px-6 py-2 rounded-full text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                {t('nav.register')}
+                Register
                 </Link>
               </div>
             )}
@@ -305,22 +289,14 @@ export default function Header() {
           <div className="md:hidden absolute top-full left-0 right-0 bg-gradient-to-br from-gray-900 to-black backdrop-blur-lg border-t border-white/10">
             <nav className="px-4 py-6 space-y-4">
               <Link href="/" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
-                {t('nav.home')}
+                Home
               </Link>
               <Link href="/products" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
-                {t('nav.products')}
+                Products
               </Link>
               <Link href="/contact" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
-                {t('nav.contact')}
+                Contact
               </Link>
-
-              {/* Language Toggle Mobile */}
-              <button
-                onClick={toggleLanguage}
-                className="w-full text-right text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10"
-              >
-                {language === 'ar' ? 'EN' : 'العربية'}
-              </button>
 
               {/* Mobile Auth Section */}
               {isAuth ? (
@@ -333,37 +309,35 @@ export default function Header() {
                         </span>
                       </div>
                       <div>
-                        <p className="text-white font-medium text-sm">{user?.fullName || user?.name || 'المستخدم'}</p>
+                        <p className="text-white font-medium text-sm">{user?.fullName || user?.name || 'User'}</p>
                         <p className="text-gray-400 text-xs">{user?.email}</p>
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Link href="/profile" className="block text-white hover:text-gray-300 text-sm py-1">
-                      {t('nav.profile')}
-
+                      Profile
                       </Link>
                       <Link href="/orders" className="block text-white hover:text-gray-300 text-sm py-1">
-                      {t('nav.orders')}
+                      Orders
                       </Link>
                       {user?.role === 'admin' && (
                         <Link href="/admin" className="block text-white hover:text-gray-300 text-sm py-1">
-                        {t('nav.dash')}
-
+                        Dashboard
                         </Link>
                       )}
                       <button
                         onClick={handleLogout}
                         className="block w-full text-right text-red-400 hover:text-red-300 text-sm py-1"
                       >
-                        {t('nav.logout')}
+                        Logout
                       </button>
                     </div>
                   </div>
 
                   <Link href="/cart" className="block">
                     <div className={`flex items-center justify-between bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-all duration-300 ${isCartAnimating ? 'animate-cart-bounce' : ''}`}>
-                      <span className="text-white font-medium">{t('nav.cart')}</span>
+                      <span className="text-white font-medium">Cart</span>
                       {state.itemCount > 0 && (
                         <span className="bg-gradient-to-br from-white to-gray-300 text-black text-sm rounded-full px-2 py-1 font-bold">
                           {state.itemCount}
@@ -375,10 +349,10 @@ export default function Header() {
               ) : (
                 <div className="space-y-3">
                   <Link href="/login" className="block w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-center px-4 py-3 rounded-lg hover:bg-white/20 transition-all duration-300">
-                    {t('nav.login')}
+                    Login
                   </Link>
                   <Link href="/register" className="block w-full bg-gradient-to-r from-white to-gray-200 text-black text-center px-4 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
-                    {t('nav.register')}
+                    Register
                   </Link>
                 </div>
               )}

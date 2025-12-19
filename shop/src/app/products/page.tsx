@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useLanguage } from '@/lib/language-context';
 import { useCart } from '@/lib/cart-context';
 import { FaStar } from 'react-icons/fa';
 
@@ -100,7 +99,6 @@ async function getCategories() {
 export default function ProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useLanguage();
   const { addItem } = useCart();
 
   const [products, setProducts] = useState<any[]>([]);
@@ -251,7 +249,7 @@ export default function ProductsPage() {
               <input
                 type="text"
                 name="search"
-                placeholder={t('products.search')}
+                placeholder="Search products..."
                 value={searchValue}
                 onChange={(e) => handleSearchInputChange(e.target.value)}
                 onFocus={() => searchValue.length > 2 && setShowSuggestions(true)}
@@ -296,7 +294,7 @@ export default function ProductsPage() {
                 onChange={(e) => setCategoryValue(e.target.value)}
                 className="block w-full px-4 py-3.5 border-2 border-gray-200 rounded-2xl focus:border-black focus:ring-4 focus:ring-black/20 bg-white/50 backdrop-blur-sm transition-all duration-300 text-gray-900 font-medium"
               >
-                <option value="all">{t('products.allCategories')}</option>
+                <option value="all">All Categories</option>
                 {categories.map((category: any) => (
                   <option key={category._id} value={category._id}>
                     {category.name}
@@ -320,7 +318,7 @@ export default function ProductsPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                  <span>{t('products.searchButton')}</span>
+                  <span>Search</span>
                 </span>
               )}
             </button>
@@ -334,7 +332,7 @@ export default function ProductsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
             <p className="text-gray-700 font-semibold text-sm">
-              {t('products.foundProducts').replace('{count}', pagination.totalProducts?.toString() || '0')}
+              Found {pagination.totalProducts?.toString() || '0'} products
             </p>
           </div>
         </div>
@@ -575,7 +573,7 @@ export default function ProductsPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
-                      <span>{t('common.previous')}</span>
+                      <span>Previous</span>
                     </button>
                   )}
 
@@ -613,7 +611,7 @@ export default function ProductsPage() {
                       onClick={() => handlePageChange(currentPage + 1)}
                       className="flex items-center space-x-2 rtl:space-x-reverse px-3 py-2 text-sm font-semibold text-gray-600 bg-gray-50 rounded-xl hover:bg-gray-100 hover:border-gray-300 transition-all duration-300 transform hover:scale-105 border border-gray-200"
                     >
-                      <span>{t('common.next')}</span>
+                      <span>Next</span>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
@@ -638,10 +636,10 @@ export default function ProductsPage() {
               </div>
             </div>
             <h3 className="text-2xl font-bold bg-gradient-to-r from-black to-gray-800 bg-clip-text text-transparent mb-3">
-              {t('products.noProducts')}
+              No products found
             </h3>
             <p className="text-gray-600 text-lg mb-6 max-w-md mx-auto leading-relaxed">
-              {t('products.noProductsDesc')}
+              Try adjusting your search or browse all products
             </p>
             <Link
               href="/products"
@@ -650,7 +648,7 @@ export default function ProductsPage() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span>{t('products.browseAll')}</span>
+              <span>Browse all products</span>
             </Link>
           </div>
         )}

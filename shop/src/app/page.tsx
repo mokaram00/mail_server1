@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useLanguage } from '@/lib/language-context';
 import {
   FaShoppingBag,
   FaPhoneAlt,
@@ -13,7 +12,6 @@ import {
 } from 'react-icons/fa';
 
 export default function Home() {
-  const { t } = useLanguage();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100">
@@ -34,20 +32,20 @@ export default function Home() {
             {/* Main heading */}
             <div className="relative mb-8">
               <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-gray-900 via-black to-gray-800 bg-clip-text text-transparent mb-4 leading-tight">
-                {t('home.hero.title')}
+                
               </h1>
               <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-black via-gray-800 to-gray-900 bg-clip-text text-transparent leading-tight">
-                ReversEl Shop
+                Bltnm Shop
               </h1>
 
               {/* Subtle shadow effect */}
               <div className="absolute inset-0 text-6xl md:text-8xl font-bold bg-gradient-to-r from-gray-900/10 via-black/10 to-gray-800/10 bg-clip-text text-transparent transform translate-x-1 translate-y-1">
-                {t('home.hero.title')} ReversEl Shop
+                Bltnm Shop
               </div>
             </div>
 
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              {t('home.hero.description')}
+              Your secure place to buy creative tools and accessories
             </p>
 
             {/* CTA Buttons */}
@@ -59,7 +57,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <span className="relative z-10 flex items-center gap-2">
                   <FaShoppingBag className="w-5 h-5" />
-                  {t('home.hero.browseProducts')}
+                  Browse Products
                 </span>
               </Link>
 
@@ -69,7 +67,7 @@ export default function Home() {
               >
                 <span className="flex items-center gap-2">
                   <FaPhoneAlt className="w-5 h-5" />
-                  {t('home.hero.getInTouch')}
+                  Get in Touch
                 </span>
               </Link>
             </div>
@@ -82,10 +80,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent mb-6">
-              {t('home.features.title')}
+              Why Choose Us
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              {t('home.features.subtitle')}
+              We offer premium quality products with exceptional service
             </p>
           </div>
 
@@ -103,9 +101,9 @@ export default function Home() {
                 </div>
               </div>
 
-              <h3 className="text-2xl font-bold text-gray-900 mb-4 relative z-10">{t('home.features.quality.title')}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 relative z-10">Premium Quality</h3>
               <p className="text-gray-600 relative z-10">
-                {t('home.features.quality.description')}
+                Our products are crafted with attention to detail and built to last, ensuring you get the best value for your investment.
               </p>
             </div>
 
@@ -122,9 +120,9 @@ export default function Home() {
                 </div>
               </div>
 
-              <h3 className="text-2xl font-bold text-gray-900 mb-4 relative z-10">{t('home.features.design.title')}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 relative z-10">Creative Design</h3>
               <p className="text-gray-600 relative z-10">
-                {t('home.features.design.description')}
+                Each product is designed with creativity and innovation, adding style and functionality to your everyday life.
               </p>
             </div>
 
@@ -141,9 +139,9 @@ export default function Home() {
                 </div>
               </div>
 
-              <h3 className="text-2xl font-bold text-gray-900 mb-4 relative z-10">{t('home.features.delivery.title')}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 relative z-10">Fast Delivery</h3>
               <p className="text-gray-600 relative z-10">
-                {t('home.features.delivery.description')}
+                We ensure fast and reliable delivery to your doorstep, with tracking and insurance for your peace of mind.
               </p>
             </div>
           </div>
@@ -163,10 +161,10 @@ export default function Home() {
 
         <div className="relative z-10 max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl md:text-5xl font-bold mb-8 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-            {t('home.cta.title')}
+            Ready to Shop?
           </h2>
           <p className="text-xl text-gray-300 mb-12 leading-relaxed">
-            {t('home.cta.subtitle')}
+            Join thousands of satisfied customers who have transformed their spaces with our premium products.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
@@ -177,7 +175,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-r from-gray-200 to-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <span className="relative z-10 flex items-center gap-2">
                 <FaShoppingCart className="w-5 h-5" />
-                {t('home.cta.shopNow')}
+                Shop Now
               </span>
             </Link>
 
@@ -187,7 +185,7 @@ export default function Home() {
             >
               <span className="flex items-center gap-2">
                 <FaCommentDots className="w-5 h-5" />
-                {t('home.cta.contactUs')}
+                Contact Us
               </span>
             </Link>
           </div>

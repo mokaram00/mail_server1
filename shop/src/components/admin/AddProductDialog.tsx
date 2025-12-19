@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useLanguage } from '@/lib/language-context';
 
 interface Product {
   _id: string;
@@ -29,7 +28,6 @@ interface AddProductDialogProps {
 }
 
 export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddProductDialogProps) {
-  const { t } = useLanguage();
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
@@ -79,23 +77,23 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
     const newErrors: {[key: string]: string} = {};
 
     if (!productForm.name.trim()) {
-      newErrors.name = t('auth.errors.productNameRequired');
+      newErrors.name = 'Product name is required';
     }
 
     if (productForm.description.length < 10) {
-      newErrors.description = t('auth.errors.productDescriptionTooShort');
+      newErrors.description = 'Product description must be at least 10 characters';
     }
 
     if (!productForm.price || parseFloat(productForm.price) <= 0) {
-      newErrors.price = t('auth.errors.productPriceRequired');
+      newErrors.price = 'Product price must be greater than 0';
     }
 
     if (!productForm.stock || parseInt(productForm.stock) < 0) {
-      newErrors.stock = t('auth.errors.productStockRequired');
+      newErrors.stock = 'Product stock must be 0 or greater';
     }
 
     if (selectedImages.length === 0) {
-      newErrors.images = t('auth.errors.imageRequired');
+      newErrors.images = 'At least one image is required';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -105,7 +103,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
 
     const token = localStorage.getItem('access_token');
     if (!token) {
-      alert('يجب تسجيل الدخول أولاً');
+      alert('You must log in first');
       return;
     }
 
@@ -122,7 +120,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
 
       if (!response.ok) {
         setErrors({
-          name: t('auth.errors.unauthorized'),
+          name: 'Unauthorized access',
         });
         return;
       }
@@ -130,7 +128,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
       const data = await response.json();
       if (data.user.role !== 'admin') {
         setErrors({
-          name: t('auth.errors.unauthorized'),
+          name: 'Unauthorized access',
         });
         return;
       }
@@ -148,9 +146,9 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
 
       await onAddProduct(event, productData);
     } catch (error: any) {
-      console.error('خطأ في إرسال البيانات:', error);
+      console.error('Error sending data:', error);
       setErrors({
-        name: t('auth.errors.unauthorized'),
+        name: 'Unauthorized access',
       });
     } finally {
       setIsCreatingProduct(false);
@@ -179,13 +177,13 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-xl font-bold text-gray-900">{t('admin.addProduct')}</h3>
+          <h3 className="text-xl font-bold text-gray-900">Add New Product</h3>
         </div>
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.productName')}
+                Product Name
               </label>
               <input
                 type="text"
@@ -194,7 +192,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
                 className={`w-full px-4 py-3 border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black bg-white text-gray-900 placeholder-gray-500 transition-all duration-300 ${
                   errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'
                 }`}
-                placeholder={t('admin.productNamePlaceholder')}
+                placeholder="Enter product name"
               />
               {errors.name && (
                 <p className="mt-1 text-sm text-red-600">{errors.name}</p>
@@ -202,7 +200,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.productPrice')}
+                Product Price ($)
               </label>
               <input
                 type="number"
@@ -221,7 +219,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.productStock')}
+                Product Stock
               </label>
               <input
                 type="number"
@@ -239,7 +237,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.productDescriptionLabel')}
+                Product Description
               </label>
               <textarea
                 value={productForm.description}
@@ -248,7 +246,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
                 className={`w-full px-4 py-3 border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black bg-white text-gray-900 placeholder-gray-500 transition-all duration-300 ${
                   errors.description ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'
                 }`}
-                placeholder={t('admin.productDescription')}
+                placeholder="Enter product description"
               />
               {errors.description && (
                 <p className="mt-1 text-sm text-red-600">{errors.description}</p>
@@ -256,7 +254,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                {t('admin.productImages')}
+                Product Images
               </label>
               <input
                 type="file"
@@ -274,14 +272,14 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
             {imagePreviews.length > 0 && (
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-900 mb-2">
-                  {t('admin.selectedImages')} ({imagePreviews.length})
+                  Selected Images ({imagePreviews.length})
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative group">
                       <img
                         src={preview}
-                        alt={`صورة ${index + 1}`}
+                        alt={`Image ${index + 1}`}
                         className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
                       />
                       <button
@@ -316,7 +314,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
                   className="rounded border-2 border-gray-300 text-black focus:ring-black focus:ring-2"
                 />
                 <span className="mr-2 text-sm font-medium text-gray-900">
-                  {t('admin.productFeatured')}
+                  Featured Product
                 </span>
               </label>
             </div>
@@ -327,7 +325,7 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
               onClick={handleClose}
               className="px-6 py-3 border-2 border-gray-300 rounded-2xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-300"
             >
-              {t('common.cancel')}
+              Cancel
             </button>
             <button
               type="submit"
@@ -341,15 +339,15 @@ export default function AddProductDialog({ isOpen, onClose, onAddProduct }: AddP
               {isUploadingImages ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block ml-2"></div>
-                  {t('admin.uploadingImages')}
+                  Uploading Images...
                 </>
               ) : isCreatingProduct ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block ml-2"></div>
-                  {t('admin.creatingProduct')}
+                  Adding Product...
                 </>
               ) : (
-                t('admin.addProduct')
+                'Add Product'
               )}
             </button>
           </div>

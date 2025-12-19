@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useLanguage } from '@/lib/language-context';
 
 interface Product {
   _id: string;
@@ -23,7 +22,6 @@ interface DeleteProductDialogProps {
 }
 
 export default function DeleteProductDialog({ isOpen, onClose, product, onConfirmDelete }: DeleteProductDialogProps) {
-  const { t } = useLanguage();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -52,7 +50,7 @@ export default function DeleteProductDialog({ isOpen, onClose, product, onConfir
             </div>
           </div>
           <h3 className="text-xl font-bold text-red-900 text-center mt-3">
-            {t('common.confirm')}
+            Confirm Deletion
           </h3>
         </div>
 
@@ -73,11 +71,11 @@ export default function DeleteProductDialog({ isOpen, onClose, product, onConfir
                 <div className="space-y-1 text-sm text-gray-600">
                   <p className="flex items-center">
                     <span className="font-medium text-gray-700 ml-2">💰</span>
-                    {t('admin.price')}: {product.price} $
+                    Price: {product.price} $
                   </p>
                   <p className="flex items-center">
                     <span className="font-medium text-gray-700 ml-2">📦</span>
-                    {t('admin.stock')}: {product.stock}
+                    Stock: {product.stock}
                   </p>
                 </div>
               </div>
@@ -94,10 +92,10 @@ export default function DeleteProductDialog({ isOpen, onClose, product, onConfir
               </div>
               <div>
                 <p className="text-sm font-medium text-yellow-800 mb-1">
-                  {t('common.warning')}
+                  Warning
                 </p>
                 <p className="text-sm text-yellow-700">
-                  {t('admin.deleteProductWarning')}
+                  This action cannot be undone. Are you sure you want to delete this product?
                 </p>
               </div>
             </div>
@@ -114,7 +112,7 @@ export default function DeleteProductDialog({ isOpen, onClose, product, onConfir
                   : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transform hover:scale-105'
               }`}
             >
-              {t('common.cancel')}
+              Cancel
             </button>
             <button
               onClick={handleDelete}
@@ -128,14 +126,14 @@ export default function DeleteProductDialog({ isOpen, onClose, product, onConfir
               {isDeleting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block ml-2"></div>
-                  {t('admin.deletingProduct')}
+                  Deleting Product...
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  {t('common.delete')}
+                  Delete
                 </>
               )}
             </button>

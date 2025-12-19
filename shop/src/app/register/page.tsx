@@ -3,10 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLanguage } from '@/lib/language-context';
 
 export default function RegisterPage() {
-  const { t, language, setLanguage } = useLanguage();
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
@@ -29,9 +27,9 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
-    // التحقق من تطابق كلمات المرور
+    // Check if passwords match
     if (formData.password !== formData.confirmPassword) {
-      setError(t('auth.register.passwordMismatch'));
+      setError('Passwords do not match');
       setLoading(false);
       return;
     }
@@ -48,30 +46,30 @@ export default function RegisterPage() {
           fullName: formData.fullName,
           phone: formData.phone,
           address: formData.address,
-          language: language, // إرسال اللغة المختارة
+          language: 'en', // Send selected language
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // حفظ توكنات Supabase في localStorage
+        // Save Supabase tokens to localStorage
         if (data.token) {
           localStorage.setItem('access_token', data.token);
         }
         localStorage.setItem('user', JSON.stringify(data.user));
 
-        // توجيه إلى الصفحة الرئيسية
+        // Redirect to home page
         router.push('/');
       } else {
-        // عرض رسالة الخطأ باللغة المناسبة
-        const errorMessage = data.error || t('auth.errors.serverError');
+        // Display error message in appropriate language
+        const errorMessage = data.error || 'Server error occurred';
         const errorDetails = data.details || '';
 
         setError(`${errorMessage}${errorDetails ? ` - ${errorDetails}` : ''}`);
       }
     } catch (error) {
-      setError(t('auth.errors.networkError'));
+      setError('Network error occurred');
     } finally {
       setLoading(false);
     }
@@ -111,12 +109,12 @@ export default function RegisterPage() {
             <span className="text-3xl font-bold text-white">R</span>
           </div>
           <h2 className="mt-6 text-center text-3xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent">
-            {t('auth.register.title')}
+            Create a new account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {t('auth.register.subtitle')}{' '}
+            Or{' '}
             <Link href="/login" className="font-medium text-black hover:text-gray-800 transition-colors">
-              {t('auth.register.signIn')}
+              sign in to your account
             </Link>
           </p>
         </div>
@@ -131,7 +129,7 @@ export default function RegisterPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('auth.register.fullName')}
+                Full name
               </label>
               <input
                 id="fullName"
@@ -141,13 +139,13 @@ export default function RegisterPage() {
                 value={formData.fullName}
                 onChange={handleChange}
                 className="appearance-none relative block w-full px-4 py-3 border border-gray-200 rounded-2xl placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-300"
-                placeholder={t('auth.register.fullNamePlaceholder')}
+                placeholder="Enter your full name"
               />
             </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('auth.register.email')}
+                Email address
               </label>
               <input
                 id="email"
@@ -158,13 +156,13 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 className="appearance-none relative block w-full px-4 py-3 border border-gray-200 rounded-2xl placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-300"
-                placeholder={t('auth.register.emailPlaceholder')}
+                placeholder="Enter your email"
               />
             </div>
 
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('auth.register.phone')}
+                Phone number
               </label>
               <input
                 id="phone"
@@ -173,14 +171,14 @@ export default function RegisterPage() {
                 value={formData.phone}
                 onChange={handleChange}
                 className="appearance-none relative block w-full px-4 py-3 border border-gray-200 rounded-2xl placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-300"
-                placeholder={t('auth.register.phonePlaceholder')}
+                placeholder="Enter your phone number"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.register.password')}
+                  Password
                 </label>
                 <input
                   id="password"
@@ -191,13 +189,13 @@ export default function RegisterPage() {
                   value={formData.password}
                   onChange={handleChange}
                   className="appearance-none relative block w-full px-4 py-3 border border-gray-200 rounded-2xl placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-300"
-                  placeholder={t('auth.register.passwordPlaceholder')}
+                  placeholder="Create a password"
                 />
               </div>
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.register.confirmPassword')}
+                  Confirm password
                 </label>
                 <input
                   id="confirmPassword"
@@ -208,14 +206,14 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className="appearance-none relative block w-full px-4 py-3 border border-gray-200 rounded-2xl placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-300"
-                  placeholder={t('auth.register.confirmPasswordPlaceholder')}
+                  placeholder="Confirm your password"
                 />
               </div>
             </div>
 
             <div>
               <label htmlFor="address.street" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('auth.register.address')}
+                Address
               </label>
               <input
                 id="address.street"
@@ -224,7 +222,7 @@ export default function RegisterPage() {
                 value={formData.address.street}
                 onChange={handleChange}
                 className="appearance-none relative block w-full px-4 py-3 border border-gray-200 rounded-2xl placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-300"
-                placeholder={t('auth.register.streetPlaceholder')}
+                placeholder="Street address"
               />
             </div>
 
@@ -237,7 +235,7 @@ export default function RegisterPage() {
                   value={formData.address.city}
                   onChange={handleChange}
                   className="appearance-none relative block w-full px-4 py-3 border border-gray-200 rounded-2xl placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-300"
-                  placeholder={t('auth.register.cityPlaceholder')}
+                  placeholder="City"
                 />
               </div>
 
@@ -249,7 +247,7 @@ export default function RegisterPage() {
                   value={formData.address.state}
                   onChange={handleChange}
                   className="appearance-none relative block w-full px-4 py-3 border border-gray-200 rounded-2xl placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-300"
-                  placeholder={t('auth.register.statePlaceholder')}
+                  placeholder="State/Province"
                 />
               </div>
             </div>
@@ -264,23 +262,23 @@ export default function RegisterPage() {
               {loading ? (
                 <div className="flex items-center">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
-                  {t('auth.register.creatingAccount')}
+                  Creating account...
                 </div>
               ) : (
-                t('auth.register.createAccount')
+                'Create account'
               )}
             </button>
           </div>
 
           <div className="text-sm text-center">
             <p className="text-gray-600">
-              {t('auth.register.terms')}{' '}
+              By creating an account, you agree to our{' '}
               <a href="#" className="font-medium text-black hover:text-gray-800 transition-colors">
-                {t('auth.register.termsOfService')}
+                Terms of Service
               </a>{' '}
-              {t('common.and')}{' '}
+              and{' '}
               <a href="#" className="font-medium text-black hover:text-gray-800 transition-colors">
-                {t('auth.register.privacyPolicy')}
+                Privacy Policy
               </a>
             </p>
           </div>

@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useLanguage } from '@/lib/language-context';
 import { isAuthenticated, getCurrentUser } from '@/lib/auth-utils';
 
 export default function Loading() {
-  const { t } = useLanguage();
   const [authChecked, setAuthChecked] = useState(false);
   const [languageReady, setLanguageReady] = useState(false);
 
@@ -41,7 +39,7 @@ export default function Loading() {
       <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">{t('loading.initializing')}</p>
+          <p className="mt-2 text-sm text-gray-600">Initializing...</p>
         </div>
       </div>
     );
@@ -70,10 +68,10 @@ export default function Loading() {
           {/* Loading Text */}
           <div className="space-y-2">
             <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent">
-              {t('loading.title')}
+              Loading...
             </h3>
             <p className="text-gray-600 text-sm">
-              {t('loading.subtitle')}
+              Preparing your experience
             </p>
           </div>
 
