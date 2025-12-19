@@ -2,8 +2,9 @@
 
 const { SMTPServer } = require('smtp-server');
 const { simpleParser } = require('mailparser');
-const User = require('./models/User').default;  // Access the default export
-const Email = require('./models/Email').default;  // Access the default export
+const Emails = require('./models/Emails').default;  // Access the default export
+const Mailbox = require('./models/Mailbox').default;  // Access the default export
+const { notifyNewEmail } = require('./server'); // Import the notification function
 
 const MAIL_DOMAIN = process.env.MAIL_DOMAIN || 'example.com';
 
@@ -23,7 +24,7 @@ const server = new SMTPServer({
       return cb(new Error('Relay denied'));
     }
 
-    User.findOne({ email })
+    Emails.findOne({ email })
       .then(user => {
         if (!user) {
           return cb(new Error('Unknown recipient'));
@@ -48,7 +49,7 @@ const server = new SMTPServer({
         const senderEmail = parsed.from?.value?.[0]?.address;
         if (senderEmail) {
           try {
-            senderUser = await User.findOne({ email: senderEmail });
+            senderUser = await Emails.findOne({ email: senderEmail });
           } catch (err) {
             console.error('Error finding sender user:', err);
           }
@@ -80,8 +81,13 @@ const server = new SMTPServer({
               emailData.senderId = user._id;
             }
 
-            await Email.create(emailData);
+            // Save the email to the database
+            const savedEmail = await Mailbox.create(emailData);
             console.log(`Email saved to database for ${user.email}`);
+            
+            // Notify connected clients via WebSocket
+            notifyNewEmail(user._id.toString(), savedEmail);
+            console.log(`WebSocket notification sent for new email to ${user.email}`);
           } catch (err) {
             console.error(`Failed to save email for ${user.email}:`, err);
           }
@@ -99,3 +105,5 @@ const server = new SMTPServer({
 server.listen(25, '0.0.0.0', () => {
   console.log('SMTP server listening on port 25');
 });
+
+module.exports = server;

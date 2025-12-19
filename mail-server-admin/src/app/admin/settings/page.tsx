@@ -4,6 +4,20 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../../utils/apiClient';
 
+// Helper function to safely call addToast
+const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+  if (typeof (window as any).addToast === 'function') {
+    (window as any).addToast(message, type);
+  } else {
+    // Fallback to console logging
+    if (type === 'error') {
+      console.error(message);
+    } else {
+      console.log(message);
+    }
+  }
+};
+
 interface User {
   id: number;
   username: string;
@@ -83,10 +97,10 @@ export default function AdminSettings() {
       }
       
       // Use toast notification instead of inline message
-      (window as any).addToast('Profile updated successfully', 'success');
+      showToast('Profile updated successfully', 'success');
       setCurrentUser(data.admin);
     } catch (err: any) {
-      (window as any).addToast(err.message || 'Failed to update profile', 'error');
+      showToast(err.message || 'Failed to update profile', 'error');
       console.error(err);
     }
   };
@@ -119,14 +133,14 @@ export default function AdminSettings() {
       }
       
       // Use toast notification instead of inline message
-      (window as any).addToast('Password changed successfully', 'success');
+      showToast('Password changed successfully', 'success');
       setPasswordForm({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
     } catch (err: any) {
-      (window as any).addToast(err.message || 'Failed to change password', 'error');
+      showToast(err.message || 'Failed to change password', 'error');
       console.error(err);
     }
   };

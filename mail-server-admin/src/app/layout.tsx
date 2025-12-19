@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import React from "react";
-import { ThemeProvider } from "./components/ThemeProvider";
-import ToastContainer from "./components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mail Server Admin Panel",
-  description: "Admin panel for managing mail server users and settings",
+  title: "Mail Server Admin Dashboard",
+  description: "Admin dashboard for mail server management",
+  viewport: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
 };
 
 export default function RootLayout({
@@ -30,10 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground transition-colors duration-300`}
       >
-        <ThemeProvider>
+        <div className="animate-fadeInSlideUp">
           {children}
-          <ToastContainer />
-        </ThemeProvider>
+        </div>
       </body>
     </html>
   );

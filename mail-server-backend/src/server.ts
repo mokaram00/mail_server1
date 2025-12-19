@@ -12,8 +12,9 @@ const server = http.createServer(app);
 // Initialize Socket.IO with proper typing
 const io: Server = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [],
-    credentials: true
+    origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : ["http://localhost:3000", "http://localhost:3002", "http://157.173.127.51:3002"],
+    credentials: true,
+    methods: ["GET", "POST"]
   }
 });
 
@@ -39,12 +40,15 @@ io.on('connection', (socket: any) => {
 
 // Function to notify clients of new emails
 export const notifyNewEmail = (userId: string, email: any) => {
+  console.log(`Notifying user ${userId} of new email:`, email.subject);
+  
   // Find all sockets for this user
   connectedClients.forEach((connectedUserId, socketId) => {
     if (connectedUserId === userId) {
       const socket = io.sockets.sockets.get(socketId);
       if (socket) {
         socket.emit('newEmail', email);
+        console.log(`Sent newEmail notification to socket ${socketId} for user ${userId}`);
       }
     }
   });
@@ -54,17 +58,7 @@ export const notifyNewEmail = (userId: string, email: any) => {
 connectDB().then(() => {
   server.listen(PORT, () => {
     console.log(`Mail server is running on port ${PORT}`);
-    
-    // Start POP3 server
-    import('./pop3-server')
-      .then((module) => {
-        module.startPop3Server();
-        console.log('POP3 server started');
-      })
-      .catch((error) => {
-        console.error('Failed to start POP3 server:', error);
-      });
-      
+  
     // Start SMTP server
     import('./smtp-server')
       .then(() => {
@@ -81,3 +75,6 @@ connectDB().then(() => {
 
 // Export the app for testing purposes
 export default app;
+
+// Export io for use in other modules
+export { io };

@@ -1,20 +1,21 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import { userConnection } from '../config/mongoDb'; // Use user connection
 
-// Define the interface for User document
-export interface IUser extends Document {
+// Define the interface for Emails document
+export interface IEmails extends Document {
   username: string;
   email: string;
   password: string;
   isActive: boolean;
   domain?: string;
   accountClassification?: string;
+  description?: string;  // Optional description field
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Define the User schema
-const UserSchema: Schema<IUser> = new Schema({
+// Define the Emails schema
+const EmailsSchema: Schema<IEmails> = new Schema({
   username: {
     type: String,
     required: true,
@@ -49,12 +50,16 @@ const UserSchema: Schema<IUser> = new Schema({
   accountClassification: {
     type: String,
     trim: true
+  },
+  description: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true // Automatically adds createdAt and updatedAt fields
 });
 
-// Create and export the User model using user connection
-const User: Model<IUser> = userConnection.model<IUser>('User', UserSchema);
+// Create and export the Emails model using user connection
+const Emails: Model<IEmails> = userConnection.model<IEmails>('Emails', EmailsSchema);
 
-export default User;
+export default Emails;

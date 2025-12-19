@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUserEmails, getUserEmailById, checkNewEmails, simulateNewEmail } from '../controllers/realTimeEmailController';
+import { getUserEmails, getUserEmailById, checkNewEmails } from '../controllers/realTimeEmailController';
 import auth from '../middleware/auth';
 
 const router = express.Router();
@@ -15,8 +15,5 @@ router.get('/:id', getUserEmailById);
 
 // Check for new emails (simulated real-time checking)
 router.get('/check/new', checkNewEmails);
-
-// Simulate new email arrival (for demonstration)
-router.post('/simulate/new', simulateNewEmail);
 
 export default router;

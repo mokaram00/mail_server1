@@ -5,6 +5,20 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '../../utils/apiClient';
 import Modal from '../../components/Modal';
 
+// Helper function to safely call addToast
+const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+  if (typeof (window as any).addToast === 'function') {
+    (window as any).addToast(message, type);
+  } else {
+    // Fallback to console logging
+    if (type === 'error') {
+      console.error(message);
+    } else {
+      console.log(message);
+    }
+  }
+};
+
 interface Admin {
   _id: number | string;
   username: string;
@@ -48,14 +62,14 @@ export default function AdminsManagement() {
       }
       
       // Use toast notification
-      (window as any).addToast('Admin created successfully', 'success');
+      showToast('Admin created successfully', 'success');
       setNewAdmin({ username: '', email: '', password: '', role: 'admin' });
       setShowCreateForm(false);
       
       // Refresh admins list
       fetchAdmins();
     } catch (err: any) {
-      (window as any).addToast(err.message || 'Failed to create admin', 'error');
+      showToast(err.message || 'Failed to create admin', 'error');
       console.error(err);
     }
   };
@@ -63,30 +77,57 @@ export default function AdminsManagement() {
   const fetchAdmins = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin-auth/profile`);
+      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/admins`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch admins');
       }
       
-      // For now, we'll just show a message that this feature is being developed
-      setAdmins([]);
+      const data = await response.json();
+      setAdmins(data.admins || []);
     } catch (err) {
-      (window as any).addToast('Failed to load admins', 'error');
+      showToast('Failed to load admins', 'error');
       console.error('Error fetching admins:', err);
+      setAdmins([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
   };
 
   const updateAdminRole = async (adminId: number | string, newRole: string) => {
-    // This would be implemented if we had a proper endpoint
-    (window as any).addToast('Admin role update not implemented yet', 'info');
+    try {
+      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/admins/${adminId}/role`, { role: newRole });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to update admin role');
+      }
+      
+      // Refresh admins list
+      fetchAdmins();
+      showToast('Admin role updated successfully', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update admin role', 'error');
+      console.error('Error updating admin role:', err);
+    }
   };
 
   const deactivateAdmin = async (adminId: number | string) => {
-    // This would be implemented if we had a proper endpoint
-    (window as any).addToast('Admin deactivation not implemented yet', 'info');
+    try {
+      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/admins/${adminId}/deactivate`, {});
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to deactivate admin');
+      }
+      
+      // Refresh admins list
+      fetchAdmins();
+      showToast('Admin deactivated successfully', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to deactivate admin', 'error');
+      console.error('Error deactivating admin:', err);
+    }
   };
 
   if (loading) {
@@ -175,7 +216,7 @@ export default function AdminsManagement() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fadeInSlideDown">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Admin Management</h1>
-          <p className="text-foreground/70">Manage admin users</p>
+          <p className="text-foreground/70">Manage admin accounts</p>
         </div>
         <div className="flex gap-2">
           <button 
@@ -184,22 +225,6 @@ export default function AdminsManagement() {
           >
             Create New Admin
           </button>
-        </div>
-      </div>
-
-      {/* Info Message */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6 animate-fadeInSlideUp delay-100">
-        <div className="flex items-start">
-          <svg className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <h3 className="text-base font-semibold text-blue-500 mb-1">Admin Management</h3>
-            <p className="text-foreground/80 text-sm">
-              Admin management functionality is being developed. Currently, you can create new admins using the form above.
-              Existing admins will be displayed here once the feature is fully implemented.
-            </p>
-          </div>
         </div>
       </div>
 

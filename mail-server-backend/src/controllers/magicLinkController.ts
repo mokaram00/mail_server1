@@ -1,12 +1,32 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import Emails from '../models/Emails';
 import MagicLink from '../models/MagicLink';
 import crypto from 'crypto';
+import Admin from '../models/Admin'; // Import Admin model
+
+// Extend the Request type to include admin property
+interface AdminAuthRequest extends Request {
+  admin?: {
+    id: string;
+    role: string;
+  };
+  user?: any; // Keep for backward compatibility
+}
 
 // Generate a magic link for a user
-export const generateMagicLink = async (req: Request, res: Response): Promise<Response> => {
+export const generateMagicLink = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
+    // Check if admin is authenticated
+    if (!req.admin) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Check if admin is superadmin
+    if (req.admin.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Only superadmins can generate magic links' });
+    }
+
     const { email } = req.body;
 
     // Validate input
@@ -15,7 +35,7 @@ export const generateMagicLink = async (req: Request, res: Response): Promise<Re
     }
 
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await Emails.findOne({ email });
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -43,7 +63,7 @@ export const generateMagicLink = async (req: Request, res: Response): Promise<Re
     await magicLink.save();
 
     // Generate the magic link URL
-    const magicLinkUrl = `${process.env.FRONTEND_URL}/magic-login?token=${token}`;
+    const magicLinkUrl = `${process.env.MAIL_BOX}/magic-login?token=${token}`;
 
     // In a real application, you would send this link via email
     // For now, we'll just return it in the response
@@ -87,7 +107,7 @@ export const verifyMagicLink = async (req: Request, res: Response): Promise<Resp
     }
 
     // Find user by userId
-    const user = await User.findById(magicLink.userId);
+    const user = await Emails.findById(magicLink.userId);
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -98,8 +118,6 @@ export const verifyMagicLink = async (req: Request, res: Response): Promise<Resp
       return res.status(400).json({ message: 'Account is deactivated' });
     }
 
-    // Mark the magic link as used
-    magicLink.used = true;
     await magicLink.save();
 
     // Generate JWT token
@@ -127,7 +145,8 @@ export const verifyMagicLink = async (req: Request, res: Response): Promise<Resp
         domain: user.domain,
         accountClassification: user.accountClassification,
       },
-      token: jwtToken
+      token: jwtToken,
+      magicLinkExpiresAt: magicLink.expiresAt
     });
   } catch (error) {
     console.error('Verify magic link error:', error);

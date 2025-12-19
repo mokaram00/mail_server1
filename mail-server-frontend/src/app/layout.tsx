@@ -13,12 +13,11 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
 export const metadata: Metadata = {
-  title: "Mail Server Admin Dashboard",
-  description: "Admin dashboard for mail server management",
+  title: "Inbox ",
+  description: "Inbox",
+  viewport: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
 };
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,9 +29,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground transition-colors duration-300`}
       >
         <ThemeProvider>
-          {children}
+          <div className="animate-fadeInSlideUp min-h-screen w-full">
+            {children}
+          </div>
         </ThemeProvider>
-      </body>
-    </html>
+  </body>
+</html>
+
   );
 }

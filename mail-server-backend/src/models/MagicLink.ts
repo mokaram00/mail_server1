@@ -15,7 +15,7 @@ const MagicLinkSchema: Schema<IMagicLink> = new Schema({
   userId: {
     type: String,
     required: true,
-    ref: 'User'
+    ref: 'Emails'
   },
   token: {
     type: String,

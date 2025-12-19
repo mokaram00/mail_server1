@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import Email from '../models/Email';
-import User from '../models/User';
+import Mailbox from '../models/Mailbox';
+import Emails from '../models/Emails';
 import { notifyNewEmail } from '../server';
 
 // Extend the Request type to include user property
@@ -20,7 +20,7 @@ export const getUserEmails = async (req: AuthRequest, res: Response): Promise<Re
     }
 
     // Get emails for the authenticated user
-    const emails = await Email.find({ 
+    const emails = await Mailbox.find({ 
       recipientId: req.user.id 
     }).sort({ createdAt: -1 });
 
@@ -45,7 +45,7 @@ export const getUserEmailById = async (req: AuthRequest, res: Response): Promise
     const { id } = req.params;
     
     // Find email that belongs to the user
-    const email = await Email.findOne({
+    const email = await Mailbox.findOne({
       _id: id,
       recipientId: req.user.id
     }).populate('senderId', 'username email');
@@ -56,7 +56,7 @@ export const getUserEmailById = async (req: AuthRequest, res: Response): Promise
 
     // Mark as read when opened
     if (!email.isRead) {
-      await Email.findByIdAndUpdate(id, { isRead: true });
+      await Mailbox.findByIdAndUpdate(id, { isRead: true });
     }
 
     return res.status(200).json({
@@ -80,7 +80,7 @@ export const checkNewEmails = async (req: AuthRequest, res: Response): Promise<R
 
     // In a real implementation, this would check for new emails from an external source
     // For now, we'll just return the current emails
-    const emails = await Email.find({ 
+    const emails = await Mailbox.find({ 
       recipientId: req.user.id 
     }).sort({ createdAt: -1 });
 
@@ -90,45 +90,6 @@ export const checkNewEmails = async (req: AuthRequest, res: Response): Promise<R
     });
   } catch (error) {
     console.error('Check emails error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-/**
- * Simulate adding a new email (for demonstration purposes)
- * In a real implementation, this would be triggered by actual email arrival
- */
-export const simulateNewEmail = async (req: AuthRequest, res: Response): Promise<Response> => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    // Create a simulated email
-    const newEmail = new Email({
-      senderId: req.user.id, // Self-sent for demo purposes
-      recipientId: req.user.id,
-      subject: 'New Email Notification',
-      body: 'This is a simulated new email arriving in real-time.',
-      isRead: false,
-      isStarred: false,
-      folder: 'inbox',
-      fromAddress: 'demo@example.com',
-      toAddress: 'user@mail-server-backend',
-      receivedAt: new Date()
-    });
-
-    const savedEmail = await newEmail.save();
-    
-    // Notify connected clients
-    notifyNewEmail(req.user.id, savedEmail);
-
-    return res.status(201).json({
-      message: 'New email created and notified',
-      email: savedEmail
-    });
-  } catch (error) {
-    console.error('Simulate new email error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };

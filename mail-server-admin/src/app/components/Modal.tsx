@@ -17,17 +17,13 @@ const Modal: React.FC<ModalProps> = ({
   children,
   size = 'md'
 }) => {
-  // Close modal on Escape key press
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
 
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     }
 
@@ -37,52 +33,45 @@ const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // Don't render if not open
   if (!isOpen) return null;
 
-  // Size classes
   const sizeClasses = {
     sm: 'max-w-sm',
     md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl'
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
-      {/* Modal container */}
-      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-        {/* Modal panel */}
-        <div 
-          className={`relative transform overflow-hidden rounded-lg bg-card text-left shadow-xl transition-all sm:w-full sm:max-w-md ${sizeClasses[size]} animate-fadeInZoom`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-foreground">
-              {title}
-            </h3>
-            <button
-              type="button"
-              className="text-foreground/60 hover:text-foreground transition-colors"
-              onClick={onClose}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Content */}
-          <div className="px-6 py-4">
-            {children}
-          </div>
+
+      {/* Modal panel */}
+      <div 
+        className={`relative bg-card rounded-2xl shadow-2xl overflow-hidden w-full sm:mx-auto ${sizeClasses[size]} transform transition-all duration-300 ease-out scale-95 opacity-0 animate-fadeInZoom`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/90 backdrop-blur-md">
+          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          <button
+            type="button"
+            className="p-1 rounded-full hover:bg-foreground/10 transition-colors"
+            onClick={onClose}
+          >
+            <svg className="h-5 w-5 text-foreground/70 hover:text-foreground transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-5 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400">
+          {children}
         </div>
       </div>
     </div>

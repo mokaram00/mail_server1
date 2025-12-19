@@ -5,6 +5,20 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '../../utils/apiClient';
 import Modal from '../../components/Modal';
 
+// Helper function to safely call addToast
+const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+  if (typeof (window as any).addToast === 'function') {
+    (window as any).addToast(message, type);
+  } else {
+    // Fallback to console logging
+    if (type === 'error') {
+      console.error(message);
+    } else {
+      console.log(message);
+    }
+  }
+};
+
 interface Domain {
   domain: string;
   isDefault: boolean;
@@ -54,14 +68,14 @@ export default function DomainsManagement() {
       }
       
       // Use toast notification instead of inline message
-      (window as any).addToast(data.message, 'success');
+      showToast(data.message, 'success');
       setNewDomain('');
       setShowAddDomainForm(false);
       
       // Refresh domains
       fetchDomains();
     } catch (err: any) {
-      (window as any).addToast(err.message || 'Failed to add domain', 'error');
+      showToast(err.message || 'Failed to add domain', 'error');
       console.error(err);
     }
   };
@@ -78,7 +92,7 @@ export default function DomainsManagement() {
       const data = await response.json();
       setDomains(data.domains);
     } catch (err) {
-      (window as any).addToast('Failed to load domains', 'error');
+      showToast('Failed to load domains', 'error');
       console.error(err);
     } finally {
       setLoading(false);
@@ -135,7 +149,7 @@ export default function DomainsManagement() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fadeInSlideDown">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Domain Management</h1>
-          <p className="text-foreground/70">Manage email domains for users</p>
+          <p className="text-foreground/70">Manage email domains for accounts</p>
         </div>
         <div className="flex gap-2">
           <button 
@@ -195,7 +209,6 @@ export default function DomainsManagement() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Domain</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-card divide-y divide-border">
@@ -210,21 +223,12 @@ export default function DomainsManagement() {
                           Default
                         </span>
                       ) : (
-                        <span className="px-2 py-1 bg-border text-foreground text-xs rounded-full">
+                        <span className="px-2 py-1 bg-green-100 text-green-600 bg-border text-foreground text-xs rounded-full">
                           Normal
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {/* {!domain.isDefault && (
-                        <button
-                          onClick={() => handleSetDefaultDomain(domain.domain)}
-                          className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-all duration-200 transform hover:scale-105"
-                        >
-                          Set as Default
-                        </button>
-                      )} */}
-                    </td>
+                    
                   </tr>
                 ))}
               </tbody>

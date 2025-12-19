@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import Emails from '../models/Emails';
 
 // Extend the Request type to include user property
 interface AuthRequest extends Request {
@@ -11,7 +11,7 @@ interface AuthRequest extends Request {
   };
 }
 
-export const login = async (req: Request, res: Response): Promise<Response> => {
+export const login = async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
   try {
     const { email, password } = req.body;
 
@@ -21,7 +21,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     }
 
     // Find user by email
-    const user = await User.findOne({
+    const user = await Emails.findOne({
       email: email,
     });
 
@@ -61,6 +61,8 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       email: user.email,
     };
 
+    // Removed setCORSHeaders call as it's now handled by the global CORS middleware
+
     return res.status(200).json({
       message: 'Login successful',
       user: userData,
@@ -71,17 +73,19 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
   }
 };
 
-export const getProfile = async (req: AuthRequest, res: Response): Promise<Response> => {
+export const getProfile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<Response> => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const user = await User.findById(req.user.id).select('-password'); // Exclude password from response
+    const user = await Emails.findById(req.user.id).select('-password'); // Exclude password from response
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    // Removed setCORSHeaders call as it's now handled by the global CORS middleware
 
     return res.status(200).json({
       user,
@@ -92,10 +96,12 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<Respo
   }
 };
 
-export const logout = async (req: Request, res: Response): Promise<Response> => {
+export const logout = async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
   try {
     // Clear the token cookie
     res.clearCookie('token');
+    
+    // Removed setCORSHeaders call as it's now handled by the global CORS middleware
     
     return res.status(200).json({
       message: 'Logged out successfully'

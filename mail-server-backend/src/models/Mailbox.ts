@@ -1,8 +1,8 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import { userConnection } from '../config/mongoDb'; // Use user connection like User model
 
-// Define the interface for Email document
-export interface IEmail extends Document {
+// Define the interface for Mailbox document
+export interface IMailbox extends Document {
   senderId: mongoose.Types.ObjectId;
   recipientId: mongoose.Types.ObjectId;
   subject: string;
@@ -18,16 +18,16 @@ export interface IEmail extends Document {
   updatedAt: Date;
 }
 
-// Define the Email schema
-const EmailSchema: Schema<IEmail> = new Schema({
+// Define the Mailbox schema
+const MailboxSchema: Schema<IMailbox> = new Schema({
   senderId: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Emails',  // Updated reference to Emails model
     required: true
   },
   recipientId: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Emails',  // Updated reference to Emails model
     required: true
   },
   subject: {
@@ -70,7 +70,7 @@ const EmailSchema: Schema<IEmail> = new Schema({
   timestamps: true // Automatically adds createdAt and updatedAt fields
 });
 
-// Create and export the Email model using user connection
-const Email: Model<IEmail> = userConnection.model<IEmail>('Email', EmailSchema);
+// Create and export the Mailbox model using user connection
+const Mailbox: Model<IMailbox> = userConnection.model<IMailbox>('Mailbox', MailboxSchema);
 
-export default Email;
+export default Mailbox;

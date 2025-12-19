@@ -84,6 +84,11 @@ export const getAdminProfile = async (req: AdminAuthRequest, res: Response): Pro
       return res.status(404).json({ message: 'Admin not found' });
     }
 
+    // Check if admin is active
+    if (!admin.isActive) {
+      return res.status(403).json({ message: 'Admin account is deactivated' });
+    }
+
     return res.status(200).json({
       admin,
     });

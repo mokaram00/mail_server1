@@ -28,7 +28,7 @@ export default function Login() {
     }
 
     try {      
-      const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin-auth/login`, { email, password });
+      const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/auth/login`, { email, password });
 
       // Check if we have email and password
       if (!email || !password) {

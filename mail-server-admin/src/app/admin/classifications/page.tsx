@@ -5,9 +5,23 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '../../utils/apiClient';
 import Modal from '../../components/Modal';
 
+// Helper function to safely call addToast
+const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+  if (typeof (window as any).addToast === 'function') {
+    (window as any).addToast(message, type);
+  } else {
+    // Fallback to console logging
+    if (type === 'error') {
+      console.error(message);
+    } else {
+      console.log(message);
+    }
+  }
+};
+
 export default function ClassificationsManagement() {
   const [classifications, setClassifications] = useState<string[]>([]);
-  const [usersByClassification, setUsersByClassification] = useState<{[key: string]: number}>({});
+  const [emailsByClassification, setEmailsByClassification] = useState<{[key: string]: number}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -19,7 +33,7 @@ export default function ClassificationsManagement() {
   useEffect(() => {
     const handleClassificationCreated = () => {
       fetchClassifications();
-      fetchUsersByClassification();
+      fetchEmailsByClassification();
     };
 
     window.addEventListener('classificationCreated', handleClassificationCreated);
@@ -29,10 +43,10 @@ export default function ClassificationsManagement() {
     };
   }, []);
 
-  // Fetch classifications and user counts
+  // Fetch classifications and email counts
   useEffect(() => {
     fetchClassifications();
-    fetchUsersByClassification();
+    fetchEmailsByClassification();
   }, []);
 
   const fetchClassifications = async () => {
@@ -46,35 +60,35 @@ export default function ClassificationsManagement() {
       const data = await response.json();
       setClassifications(data.classifications.map((c: any) => c.classification));
     } catch (err) {
-      (window as any).addToast('Failed to load classifications', 'error');
+      showToast('Failed to load classifications', 'error');
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchUsersByClassification = async () => {
+  const fetchEmailsByClassification = async () => {
     try {
-      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`);
+      const response = await apiClient.get(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/emails`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        throw new Error('Failed to fetch emails');
       }
       
       const data = await response.json();
-      const users = data.users;
+      const emails = data.emails;
       
-      // Count users by classification
+      // Count emails by classification
       const counts: {[key: string]: number} = {};
-      users.forEach((user: any) => {
-        if (user.accountClassification) {
-          counts[user.accountClassification] = (counts[user.accountClassification] || 0) + 1;
+      emails.forEach((email: any) => {
+        if (email.accountClassification) {
+          counts[email.accountClassification] = (counts[email.accountClassification] || 0) + 1;
         }
       });
       
-      setUsersByClassification(counts);
+      setEmailsByClassification(counts);
     } catch (err) {
-      console.error('Failed to load user counts', err);
+      console.error('Failed to load email counts', err);
     }
   };
 
@@ -95,15 +109,15 @@ export default function ClassificationsManagement() {
       }
       
       // Use toast notification instead of inline message
-      (window as any).addToast(data.message, 'success');
+      showToast(data.message, 'success');
       setNewClassification('');
       setShowAddClassificationForm(false);
       
       // Refresh classifications
       fetchClassifications();
-      fetchUsersByClassification();
+      fetchEmailsByClassification();
     } catch (err: any) {
-      (window as any).addToast(err.message || 'Failed to add classification', 'error');
+      showToast(err.message || 'Failed to add classification', 'error');
       console.error(err);
     }
   };
@@ -183,7 +197,7 @@ export default function ClassificationsManagement() {
             <thead className="bg-accent">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Classification</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Number of Users</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Number of Emails</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -194,7 +208,7 @@ export default function ClassificationsManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-foreground/70">
-                      {usersByClassification[classification] || 0} users
+                      {emailsByClassification[classification] || 0} emails
                     </div>
                   </td>
                 </tr>
@@ -215,12 +229,12 @@ export default function ClassificationsManagement() {
       <div className="mt-8 bg-card border border-border rounded-lg shadow-sm p-6 animate-fadeInSlideUp delay-150">
         <h2 className="text-xl font-semibold mb-4 text-foreground">About Account Classifications</h2>
         <p className="text-foreground/70 mb-4">
-          Account classifications allow you to group users based on categories like "rockstar", "vip", "premium", etc.
+          Account classifications allow you to group email accounts based on categories like "rockstar", "vip", "premium", etc.
           These classifications can be used for reporting, targeted communications, and special permissions.
         </p>
         <p className="text-foreground/70">
-          To assign a classification to a user, go to the Users section and either create a new user or edit an existing one.
-          Classifications must be created in this section before they can be assigned to users.
+          To assign a classification to an email, go to the Emails section and either create a new email or edit an existing one.
+          Classifications must be created in this section before they can be assigned to emails.
         </p>
       </div>
     </div>

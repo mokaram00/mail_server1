@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
+import ToastContainer from './Toast'; // Import Toast component
 import { apiClient } from '../utils/apiClient';
 
 // Define types for our modals
-type ModalType = 'createUser' | 'createBulkUsers' | 'generateEmails' | 'createDomain' | 'createClassification' | null;
+type ModalType = 'createEmail' | 'createBulkEmails' | 'generateEmails' | 'createDomain' | 'createClassification' | null;
 
 interface GlobalModalsProps {
   children: React.ReactNode;
@@ -14,8 +15,8 @@ interface GlobalModalsProps {
 export default function GlobalModals({ children }: GlobalModalsProps) {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   
-  // User form state
-  const [newUser, setNewUser] = useState({
+  // Email form state
+  const [newEmail, setNewEmail] = useState({
     username: '',
     password: '',
     role: 'user',
@@ -24,8 +25,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
     accountClassification: ''
   });
   
-  // Bulk users form state
-  const [bulkUsers, setBulkUsers] = useState('');
+  // Bulk emails form state
+  const [bulkEmails, setBulkEmails] = useState('');
   
   // Generate emails form state
   const [generateEmailsData, setGenerateEmailsData] = useState({
@@ -53,7 +54,7 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
   
   // Load domains and classifications when user modal opens
   useEffect(() => {
-    if (activeModal === 'createUser' || activeModal === 'createBulkUsers' || activeModal === 'generateEmails') {
+    if (activeModal === 'createEmail' || activeModal === 'createBulkEmails' || activeModal === 'generateEmails') {
       fetchDomainsAndClassifications();
     }
   }, [activeModal]);
@@ -71,7 +72,7 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
         if (defaultDomain && activeModal === 'generateEmails') {
           setGenerateEmailsData(prev => ({...prev, domain: defaultDomain.domain}));
         } else if (defaultDomain) {
-          setNewUser(prev => ({...prev, domain: defaultDomain.domain}));
+          setNewEmail(prev => ({...prev, domain: defaultDomain.domain}));
         }
       }
       
@@ -88,21 +89,21 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
 
   // Listen for modal open events from anywhere in the app
   useEffect(() => {
-    const openCreateUserModal = () => setActiveModal('createUser');
-    const openCreateBulkUsersModal = () => setActiveModal('createBulkUsers');
+    const openCreateEmailModal = () => setActiveModal('createEmail');
+    const openCreateBulkEmailsModal = () => setActiveModal('createBulkEmails');
     const openGenerateEmailsModal = () => setActiveModal('generateEmails');
     const openCreateDomainModal = () => setActiveModal('createDomain');
     const openCreateClassificationModal = () => setActiveModal('createClassification');
 
-    window.addEventListener('openCreateUserModal', openCreateUserModal);
-    window.addEventListener('openCreateBulkUsersModal', openCreateBulkUsersModal);
+    window.addEventListener('openCreateEmailModal', openCreateEmailModal);
+    window.addEventListener('openCreateBulkEmailsModal', openCreateBulkEmailsModal);
     window.addEventListener('openGenerateEmailsModal', openGenerateEmailsModal);
     window.addEventListener('openCreateDomainModal', openCreateDomainModal);
     window.addEventListener('openCreateClassificationModal', openCreateClassificationModal);
 
     return () => {
-      window.removeEventListener('openCreateUserModal', openCreateUserModal);
-      window.removeEventListener('openCreateBulkUsersModal', openCreateBulkUsersModal);
+      window.removeEventListener('openCreateEmailModal', openCreateEmailModal);
+      window.removeEventListener('openCreateBulkEmailsModal', openCreateBulkEmailsModal);
       window.removeEventListener('openGenerateEmailsModal', openGenerateEmailsModal);
       window.removeEventListener('openCreateDomainModal', openCreateDomainModal);
       window.removeEventListener('openCreateClassificationModal', openCreateClassificationModal);
@@ -159,7 +160,7 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
           accountClassification: generateEmailsData.accountClassification || ''
         };
         
-        const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`, userData);
+        const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/emails`, userData);
         
         if (!response.ok) {
           const data = await response.json();
@@ -170,8 +171,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
       (window as any).addToast(`Successfully created ${generatedUsers.length} users`, 'success');
       closeModal();
       
-      // Dispatch event to update users list
-      window.dispatchEvent(new CustomEvent('userCreated'));
+      // Dispatch event to update emails list
+      window.dispatchEvent(new CustomEvent('emailCreated'));
     } catch (err: any) {
       (window as any).addToast(err.message || 'Failed to create users', 'error');
       setError(err.message || 'Failed to create users');
@@ -183,7 +184,7 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
   const closeModal = () => {
     setActiveModal(null);
     // Reset form states when closing modal
-    setNewUser({
+    setNewEmail({
       username: '',
       password: '',
       role: 'user',
@@ -191,7 +192,7 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
       isDefaultDomain: false,
       accountClassification: ''
     });
-    setBulkUsers('');
+    setBulkEmails('');
     setGenerateEmailsData({
       count: 5,
       domain: '',
@@ -208,12 +209,13 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
   return (
     <>
       {children}
+      <ToastContainer />
       
       {/* Create User Modal */}
       <Modal
-        isOpen={activeModal === 'createUser'}
+        isOpen={activeModal === 'createEmail'}
         onClose={closeModal}
-        title="Create New User"
+        title="Create New Email"
         size="lg"
       >
         <form onSubmit={async (e) => {
@@ -222,18 +224,18 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
           setError(null);
           
           try {
-            const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`, newUser);
+            const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/emails`, newEmail);
             const data = await response.json();
             
             if (!response.ok) {
-              throw new Error(data.message || 'Failed to create user');
+              throw new Error(data.message || 'Failed to create email');
             }
             
-            (window as any).addToast('User created successfully', 'success');
+            (window as any).addToast('Email created successfully', 'success');
             closeModal();
             
-            // Dispatch event to update users list
-            window.dispatchEvent(new CustomEvent('userCreated'));
+            // Dispatch event to update emails list
+            window.dispatchEvent(new CustomEvent('emailCreated'));
           } catch (err: any) {
             (window as any).addToast(err.message || 'Failed to create user', 'error');
             setError(err.message || 'Failed to create user');
@@ -246,8 +248,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
               <label className="block text-sm font-medium text-foreground/80 mb-1">Username</label>
               <input
                 type="text"
-                value={newUser.username}
-                onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                value={newEmail.username}
+                onChange={(e) => setNewEmail({...newEmail, username: e.target.value})}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
                 required
               />
@@ -257,8 +259,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
               <label className="block text-sm font-medium text-foreground/80 mb-1">Password</label>
               <input
                 type="password"
-                value={newUser.password}
-                onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                value={newEmail.password}
+                onChange={(e) => setNewEmail({...newEmail, password: e.target.value})}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
                 required
               />
@@ -267,8 +269,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
             <div>
               <label className="block text-sm font-medium text-foreground/80 mb-1">Role</label>
               <select
-                value={newUser.role}
-                onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                value={newEmail.role}
+                onChange={(e) => setNewEmail({...newEmail, role: e.target.value})}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
               >
                 <option value="user">User</option>
@@ -279,8 +281,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
             <div>
               <label className="block text-sm font-medium text-foreground/80 mb-1">Domain</label>
               <select
-                value={newUser.domain}
-                onChange={(e) => setNewUser({...newUser, domain: e.target.value})}
+                value={newEmail.domain}
+                onChange={(e) => setNewEmail({...newEmail, domain: e.target.value})}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
               >
                 <option value="">Select a domain</option>
@@ -296,8 +298,8 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
               <label className="block text-sm font-medium text-foreground/80 mb-1">Account Classification (optional)</label>
               <div className="flex space-x-2">
                 <select
-                  value={newUser.accountClassification}
-                  onChange={(e) => setNewUser({...newUser, accountClassification: e.target.value})}
+                  value={newEmail.accountClassification}
+                  onChange={(e) => setNewEmail({...newEmail, accountClassification: e.target.value})}
                   className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground transition-all duration-200"
                 >
                   <option value="">Select classification or create new</option>
@@ -312,7 +314,7 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
                   onClick={() => {
                     const newClassification = prompt('Enter new classification name:');
                     if (newClassification && newClassification.trim()) {
-                      setNewUser({...newUser, accountClassification: newClassification.trim()});
+                      setNewEmail({...newEmail, accountClassification: newClassification.trim()});
                     }
                   }}
                   className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200"
@@ -335,7 +337,7 @@ export default function GlobalModals({ children }: GlobalModalsProps) {
               disabled={loading}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create User'}
+              {loading ? 'Creating...' : 'Create Email'}
             </button>
             <button 
               type="button"

@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import Admin from '../models/Admin';
-import User from '../models/User';
-import Email from '../models/Email';
+import Emails from '../models/Emails';
+import Mailbox from '../models/Mailbox';
 import Domain from '../models/Domain';
 import Category from '../models/Category';
 
@@ -14,23 +14,37 @@ interface AdminAuthRequest extends Request {
   };
   user?: any; // Keep for backward compatibility
 }
+
+export const getAdmins = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
+  try {
+    // Get all admins
+    const admins = await Admin.find({}).select('-password'); // Exclude passwords
+
+    return res.status(200).json({
+      admins,
+    });
+  } catch (error) {
+    console.error('Get admins error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
 export const getUsers = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
-    // Get all users except the current admin and except permanent classification/domain users
-    const users = await User.find({
+    // Get all emails except the current admin and except permanent classification/domain emails
+    const emails = await Emails.find({
       _id: { $ne: req.admin?.id }, // Not equal to current admin
       username: { 
         $not: { 
           $regex: /^(classification_|domain_)/ 
         } 
-      } // Exclude permanent classification and domain users
+      } // Exclude permanent classification and domain emails
     }).select('-password'); // Exclude passwords
 
     return res.status(200).json({
-      users,
+      emails,
     });
   } catch (error) {
-    console.error('Get users error:', error);
+    console.error('Get emails error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -40,7 +54,7 @@ export const getUserById = async (req: Request, res: Response): Promise<Response
     const { id } = req.params;
 
     // Find user by ID
-    const user = await User.findById(id).select('-password'); // Exclude password
+    const user = await Emails.findById(id).select('-password'); // Exclude password
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -51,6 +65,77 @@ export const getUserById = async (req: Request, res: Response): Promise<Response
     });
   } catch (error) {
     console.error('Get user by ID error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const updateAdminRole = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Validate role
+    if (!['admin', 'superadmin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role parameter' });
+    }
+
+    // Find admin by ID
+    const admin = await Admin.findById(id);
+
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    // Update admin role
+    admin.role = role;
+    await admin.save();
+
+    return res.status(200).json({
+      message: 'Admin role updated successfully',
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role,
+      },
+    });
+  } catch (error) {
+    console.error('Update admin role error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const deactivateAdmin = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+
+    // Find admin by ID
+    const admin = await Admin.findById(id);
+
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    // Prevent admin from deactivating themselves
+    if (admin._id.toString() === req.admin?.id) {
+      return res.status(400).json({ message: 'Cannot deactivate your own account' });
+    }
+
+    // Deactivate admin
+    admin.isActive = false;
+    await admin.save();
+
+    return res.status(200).json({
+      message: 'Admin deactivated successfully',
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        isActive: admin.isActive,
+      },
+    });
+  } catch (error) {
+    console.error('Deactivate admin error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -71,7 +156,7 @@ export const updateUserClassification = async (req: Request, res: Response): Pro
     const { classification } = req.body;
 
     // Find user by ID
-    const user = await User.findById(id);
+    const user = await Emails.findById(id);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -101,7 +186,7 @@ export const deactivateUser = async (req: AdminAuthRequest, res: Response): Prom
     const { id } = req.params;
 
     // Find user by ID
-    const user = await User.findById(id);
+    const user = await Emails.findById(id);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -133,16 +218,16 @@ export const deactivateUser = async (req: AdminAuthRequest, res: Response): Prom
 
 export const getSystemStats = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
-    // Get system statistics excluding permanent classification/domain users
-    const totalUsers = await User.countDocuments({
+    // Get system statistics excluding permanent classification/domain emails
+    const totalUsers = await Emails.countDocuments({
       username: { 
         $not: { 
           $regex: /^(classification_|domain_)/ 
         } 
       }
     });
-    const totalEmails = await Email.countDocuments();
-    const activeUsers = await User.countDocuments({
+    const totalEmails = await Mailbox.countDocuments();
+    const activeUsers = await Emails.countDocuments({
       isActive: true,
       username: { 
         $not: { 
@@ -207,7 +292,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({
+    const existingUser = await Emails.findOne({
       email: email,
     });
 
@@ -246,7 +331,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
     console.log('Password hashed successfully');
 
     // Create user
-    const user = new User({
+    const user = new Emails({
       username,
       email,
       password: hashedPassword,
@@ -279,20 +364,20 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
   }
 };
 
-// Bulk create users
+// Bulk create emails
 export const bulkCreateUsers = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { users } = req.body;
-    console.log(`Bulk creating ${users.length} users`);
+    const { emails } = req.body;
+    console.log(`Bulk creating ${emails.length} emails`);
 
     // Validate input
-    if (!Array.isArray(users) || users.length === 0) {
-      console.log('Bulk create validation failed: users array is required and cannot be empty');
+    if (!Array.isArray(emails) || emails.length === 0) {
+      console.log('Bulk create validation failed: emails array is required and cannot be empty');
       return res.status(400).json({ message: 'Users array is required and cannot be empty' });
     }
 
     // Validate each user and generate emails if needed
-    for (const user of users) {
+    for (const user of emails) {
       console.log('Validating user:', user);
       if (!user.username || !user.password) {
         console.log('User validation failed: each user must have username and password');
@@ -326,27 +411,27 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       }
     }
 
-    // Check for existing users
-    const emails = users.map(user => user.email);
-    console.log('Checking for existing users with emails:', emails);
-    const existingUsers = await User.find({
+    // Check for existing emails
+    const emailAddresses = emails.map(user => user.email);
+    console.log('Checking for existing emails with emails:', emailAddresses);
+    const existingUsers = await Emails.find({
       email: {
-        $in: emails
+        $in: emailAddresses
       }
     });
 
     if (existingUsers.length > 0) {
       const existingEmails = existingUsers.map(user => user.email);
-      console.log('Existing users found with emails:', existingEmails);
+      console.log('Existing emails found with emails:', existingEmails);
       return res.status(400).json({ 
-        message: 'Some users with these emails already exist',
+        message: 'Some emails with these emails already exist',
         existingEmails: existingEmails
       });
     }
 
     // Check if all classifications and domains exist
     console.log('Checking classifications and domains');
-    for (const user of users) {
+    for (const user of emails) {
       if (user.accountClassification && user.accountClassification.trim() !== '') {
         const existingClassification = await Category.findOne({
           name: user.accountClassification
@@ -378,7 +463,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 
     // Hash passwords and prepare user data
     const usersToCreate = [];
-    for (const user of users) {
+    for (const user of emails) {
       const hashedPassword = await bcrypt.hash(user.password, 10);
       
       usersToCreate.push({
@@ -391,11 +476,11 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       });
     }
 
-    // Create all users
-    const createdUsers = await User.insertMany(usersToCreate);
-    console.log(`Successfully created ${createdUsers.length} users`);
+    // Create all emails
+    const createdUsers = await Emails.insertMany(usersToCreate);
+    console.log(`Successfully created ${createdUsers.length} emails`);
 
-    // Return created users without passwords
+    // Return created emails without passwords
     const userData = createdUsers.map(user => ({
       id: user._id,
       username: user.username,
@@ -406,11 +491,11 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
     }));
 
     return res.status(201).json({
-      message: `Successfully created ${createdUsers.length} users`,
-      users: userData,
+      message: `Successfully created ${createdUsers.length} emails`,
+      emails: userData,
     });
   } catch (error) {
-    console.error('Bulk create users error:', error);
+    console.error('Bulk create emails error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -486,6 +571,96 @@ export const createAdmin = async (req: AdminAuthRequest, res: Response): Promise
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+export const getServerInfo = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
+  try {
+    // Check if user is superadmin
+    if (req.admin?.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Access denied. Superadmin rights required.' });
+    }
+
+    // Get system information using systeminformation library
+    const si = require('systeminformation');
+
+    // Get all system data concurrently for better performance
+    const [cpuData, cpuLoad, memData, fsData, networkData, timeData, processesData] = await Promise.all([
+      si.cpu(),
+      si.currentLoad(),
+      si.mem(),
+      si.fsSize(),
+      si.networkStats(),
+      si.time(),
+      si.processes()
+    ]);
+
+    // CPU information
+    const cpuUsage = cpuLoad.currentLoad;
+    
+    // Memory information
+    const totalMem = memData.total;
+    const usedMem = memData.active;
+    const freeMem = memData.available;
+    const memPercentage = totalMem > 0 ? (usedMem / totalMem) * 100 : 0;
+    
+    // Disk information
+    const disk = fsData[0] || { size: 0, used: 0, available: 0 };
+    const totalDisk = disk.size;
+    const usedDisk = disk.used;
+    const freeDisk = disk.available;
+    const diskPercentage = totalDisk > 0 ? (usedDisk / totalDisk) * 100 : 0;
+    
+    // Network information
+    const networkInterface = networkData[0] || { rx_bytes: 0, tx_bytes: 0 };
+    const networkInfo = {
+      rx: networkInterface.rx_bytes || 0,
+      tx: networkInterface.tx_bytes || 0
+    };
+    
+    // Uptime
+    const uptime = timeData.uptime;
+    
+    // Load average - using current load as approximation since systeminformation
+    // doesn't expose traditional load averages on all platforms
+    const loadAvg = cpuLoad.avgLoad || 0;
+    
+    // Process count
+    const processes = processesData.all || 0;
+
+    return res.status(200).json({
+      serverInfo: {
+        cpu: {
+          usage: cpuUsage,
+          cores: cpuData.cores,
+          model: `${cpuData.manufacturer} ${cpuData.brand}`
+        },
+        memory: {
+          total: totalMem,
+          used: usedMem,
+          free: freeMem,
+          percentage: memPercentage
+        },
+        disk: {
+          total: totalDisk,
+          used: usedDisk,
+          free: freeDisk,
+          percentage: diskPercentage
+        },
+        network: networkInfo,
+        uptime: uptime.toString(),
+        load: {
+          '1min': loadAvg,
+          '5min': loadAvg,
+          '15min': loadAvg
+        },
+        processes: processes
+      }
+    });
+  } catch (error) {
+    console.error('Get server info error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 
 // Get all domains
 export const getDomains = async (req: Request, res: Response): Promise<Response> => {

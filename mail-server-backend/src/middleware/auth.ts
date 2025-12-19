@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import Emails from '../models/Emails';
 import Admin from '../models/Admin';
 
 // Extend the Request type to include user and admin properties
@@ -27,7 +27,7 @@ const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promis
     
     // Check if it's a user token
     if (decoded.userId) {
-      const user = await User.findById(decoded.userId).select('-password');
+      const user = await Emails.findById(decoded.userId).select('-password');
       if (!user) {
         return res.status(401).json({ message: 'Token is not valid' });
       }

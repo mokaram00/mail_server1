@@ -92,6 +92,15 @@ npm start
 - All passwords are hashed and stored securely
 - JWT tokens are used for authentication
 - TLS encryption is used for POP3 connections
+- Rate limiting is implemented to prevent DDoS attacks:
+  - General rate limiting: 100 requests per 15 minutes per IP
+  - Authentication rate limiting: 5 requests per 15 minutes per IP
+  - API rate limiting: 200 requests per 15 minutes per IP
+- POP3 server has connection limits:
+  - Maximum 10 connections per IP per minute
+  - Maximum 1000 concurrent connections
+  - Maximum 10000 messages per session
+- CSRF (Cross-Site Request Forgery) protection is implemented for all state-changing requests
 
 ## Custom Domain Setup
 

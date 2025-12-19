@@ -9,6 +9,14 @@ export default function Home() {
   useEffect(() => {
     // Redirect to login page by default
     router.push('/login');
+
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        return;
+      }
+      router.push('/inbox');
+    }
   }, [router]);
 
   return (
