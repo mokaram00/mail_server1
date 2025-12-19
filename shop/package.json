@@ -1,0 +1,52 @@
+{
+  "name": "reversel-shop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "create-polar": "npx ts-node src/scripts/create-polar-resources.ts"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@polar-sh/sdk": "^0.40.1",
+    "@supabase/supabase-js": "^2.75.1",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^1.41.0",
+    "dotenv": "^17.2.3",
+    "eslint-config-next": "14.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.0",
+    "multer": "^1.4.5-lts.1",
+    "next": "14.0.0",
+    "next-intl": "^4.4.0",
+    "nodemailer": "^6.9.0",
+    "paypal-rest-sdk": "^1.8.1",
+    "postcss": "^8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-icons": "^5.5.0",
+    "react-player": "^3.3.3",
+    "stripe": "^14.0.0",
+    "supabase": "^2.51.0",
+    "tailwindcss": "^3.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "prettier": "^3.6.2"
+  }
+}
