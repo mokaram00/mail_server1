@@ -660,7 +660,7 @@ export default function Inbox() {
                       size="sm"
                       variant="ghost"
                       className="ml-2 opacity-100 group-hover:opacity-100 transition-opacity"
-                      onCopyChange={(isCopied) => {
+                      onCopyChange={(isCopied: boolean) => {
                         if (isCopied) {
                           setCopyStatus('copied');
                           setTimeout(() => setCopyStatus('copy'), 2000);
