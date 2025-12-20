@@ -14,52 +14,63 @@ interface AuthRequest extends Request {
   };
 }
 
-const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<Response | void> => {
-  try {
-    // Check for token in cookies
-    const token = req.cookies.token;
-    
-    if (!token) {
-      return res.status(401).json({ message: 'No token, authorization denied' });
-    }
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key') as { userId?: string, adminId?: string, role: string };
-    
-    // Check if it's a user token
-    if (decoded.userId) {
-      const user = await Emails.findById(decoded.userId).select('-password');
-      if (!user) {
-        return res.status(401).json({ message: 'Token is not valid' });
+const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
+  return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const tokens = {
+        admin: req.cookies.admin_token,
+        inbox: req.cookies.inbox_token,
+        user: req.cookies.user_token,
+      };
+
+      const token = tokens[requiredType];
+
+      if (!token) {
+        res.status(401).json({ message: 'No token found for ' + requiredType });
+        return;
       }
 
-      req.user = {
-        id: user._id.toString(),
-      };
-      req.admin = undefined; // Ensure admin is not set
-    } 
-    // Check if it's an admin token
-    else if (decoded.adminId) {
-      const admin = await Admin.findById(decoded.adminId).select('-password');
-      if (!admin) {
-        return res.status(401).json({ message: 'Token is not valid' });
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key') as any;
+
+      switch (requiredType) {
+        case 'admin': {
+          const admin = await Admin.findById(decoded.adminId).select('-password');
+          if (!admin) {
+            res.status(401).json({ message: 'Invalid admin token' });
+            return;
+          }
+          req.admin = { id: admin._id.toString(), role: admin.role };
+          req.user = undefined;
+          break;
+        }
+        case 'user': {
+          const user = await Emails.findById(decoded.userId).select('-password');
+          if (!user) {
+            res.status(401).json({ message: 'Invalid user token' });
+            return;
+          }
+          req.user = { id: user._id.toString() };
+          req.admin = undefined;
+          break;
+        }
+        case 'inbox': {
+          const inbox = await Emails.findById(decoded.userId).select('-password');
+          if (!inbox) {
+            res.status(401).json({ message: 'Invalid inbox token' });
+            return;
+          }
+          req.user = { id: inbox._id.toString() };
+          req.admin = undefined;
+          break;
+        }
       }
 
-      req.admin = {
-        id: admin._id.toString(),
-        role: admin.role
-      };
-      req.user = undefined; // Ensure user is not set
-    } 
-    // Invalid token
-    else {
-      return res.status(401).json({ message: 'Token is not valid' });
+      next();
+    } catch (error) {
+      console.error('Auth error:', error);
+      res.status(401).json({ message: 'Token is not valid' });
     }
-    
-    next();
-  } catch (error) {
-    console.error('Auth error:', error);
-    res.status(401).json({ message: 'Token is not valid' });
-  }
+  };
 };
 
 export default auth;

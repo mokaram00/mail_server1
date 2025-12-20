@@ -1,15 +1,16 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
-  async rewrites() {
-    return [
+const nextConfig = {
+  images: {
+    remotePatterns: [
       {
-        source: '/api/:path*',
-        destination: 'http://localhost:3000/api/:path*',
+        protocol: "https",
+        hostname: "api.bltnm.store",
+        pathname: "/uploads/**",
       },
-    ];
+    ],
   },
 };
+
 
 export default nextConfig;

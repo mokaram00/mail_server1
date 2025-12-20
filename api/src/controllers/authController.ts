@@ -47,11 +47,12 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       { expiresIn: '24h' }
     );
 
-    // Set token in cookie
-    res.cookie('token', token, {
+    // Set inbox token in cookie with proper domain
+    res.cookie('inbox_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'none',
     });
 
     // Return user data without password
@@ -98,8 +99,10 @@ export const getProfile = async (req: AuthRequest, res: Response, next: NextFunc
 
 export const logout = async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
   try {
-    // Clear the token cookie
-    res.clearCookie('token');
+    // Clear the inbox token cookie
+    res.clearCookie('inbox_token', {
+      domain: 'inbox.bltnm.store'
+    });
     
     // Removed setCORSHeaders call as it's now handled by the global CORS middleware
     

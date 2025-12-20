@@ -1,11 +1,17 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-  images: {
-    domains: ['res.cloudinary.com'],
-  },
-}
+import type { NextConfig } from "next";
 
-module.exports = nextConfig
+const nextConfig: NextConfig = {
+  /* config options here */
+  images: {
+    domains: [ 'api.bltnm.store'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'api.bltnm.store',
+        pathname: '/uploads/**',
+      },
+    ],
+  },
+};
+
+export default nextConfig;

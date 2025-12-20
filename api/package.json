@@ -22,7 +22,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/multer": "^2.0.0",
     "@types/socket.io": "^3.0.2",
+    "@types/uuid": "^10.0.0",
     "@zone-eu/wildduck": "^1.46.13",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
@@ -35,6 +37,7 @@
     "mailparser": "^3.9.1",
     "mongodb": "^7.0.0",
     "mongoose": "^9.0.2",
+    "multer": "^2.0.2",
     "mysql2": "^3.11.3",
     "nodemailer": "^6.9.15",
     "pop3": "^0.2.0",
@@ -42,7 +45,8 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "sqlite3": "^5.1.7",
-    "systeminformation": "^5.27.14"
+    "systeminformation": "^5.27.14",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

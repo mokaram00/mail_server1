@@ -47,11 +47,12 @@ export const adminLogin = async (req: Request, res: Response): Promise<Response>
       { expiresIn: '24h' }
     );
 
-    // Set token in cookie
-    res.cookie('token', token, {
+    // Set admin token in cookie with proper domain configuration
+    res.cookie('admin_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'none',
     });
 
     // Return admin data without password
@@ -151,8 +152,10 @@ export const updateAdminProfile = async (req: AdminAuthRequest, res: Response): 
 
 export const adminLogout = async (req: Request, res: Response): Promise<Response> => {
   try {
-    // Clear the token cookie
-    res.clearCookie('token');
+    // Clear the admin token cookie with proper domain
+    res.clearCookie('admin_token', {
+      domain: 'admin.bltnm.store'  // Changed from 'admin.bltnm.store' to '.bltnm.store'
+    });
     
     return res.status(200).json({
       message: 'Admin logged out successfully'

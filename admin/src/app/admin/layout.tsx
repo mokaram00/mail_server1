@@ -70,6 +70,10 @@ export default function AdminLayout({
       setActiveTab('admins');
     } else if (pathname?.includes('/admin/server-info')) {
       setActiveTab('server-info');
+    } else if (pathname?.includes('/admin/products')) {
+      setActiveTab('products');
+    } else if (pathname?.includes('/admin/coupons')) {
+      setActiveTab('coupons');
     } else {
       setActiveTab('dashboard');
     }
@@ -77,7 +81,7 @@ export default function AdminLayout({
 
   const handleLogout = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/auth/logout`, {
         method: 'POST',
         credentials: 'include' // Include cookies in the request
       });
@@ -355,47 +359,32 @@ export default function AdminLayout({
                 )}
               </div>
               
-              {/* Emails with Dropdown */}
+              {/* Products with Dropdown */}
               <div className="w-full">
                 <button
-                  onClick={() => setOpenDropdown(openDropdown === 'emails' ? null : 'emails')}
+                  onClick={() => setOpenDropdown(openDropdown === 'products' ? null : 'products')}
                   className={`w-full flex items-center justify-between px-4 py-3 text-base font-medium rounded-lg transition-all duration-200 hover:scale-[1.02] transform ${
-                    activeTab.startsWith('emails')
+                    activeTab.startsWith('products')
                       ? 'bg-primary text-primary-foreground shadow-md'
                       : 'text-foreground hover:bg-accent'
                   }`}
                 >
                   <div className="flex items-center">
                     <svg className="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    Emails
+                    Products
                   </div>
-                  <svg className={`h-4 w-4 transition-transform duration-200 ${openDropdown === 'emails' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`h-4 w-4 transition-transform duration-200 ${openDropdown === 'products' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 
-                {openDropdown === 'emails' && (
+                {openDropdown === 'products' && (
                   <div className="ml-8 mt-1 space-y-1 animate-fadeInSlideDown">
                     <button
                       onClick={() => {
-                        router.push('/admin/emails');
-                        setOpenDropdown(null);
-                        if (window.innerWidth < 768) toggleMobileMenu();
-                      }}
-                      className="w-full flex items-center px-4 py-2 text-sm font-medium rounded-lg text-foreground hover:bg-accent transition-colors duration-200"
-                    >
-                      <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                      </svg>
-                      List Emails
-                    </button>
-                    <button
-                      onClick={() => {
-                        // Dispatch event to open modal from anywhere
-                        const event = new CustomEvent('openCreateEmailModal');
-                        window.dispatchEvent(event);
+                        router.push('/admin/products');
                         setOpenDropdown(null);
                         if (window.innerWidth < 768) toggleMobileMenu();
                       }}
@@ -404,7 +393,47 @@ export default function AdminLayout({
                       <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
-                      Create Email
+                      Create Product
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Coupons with Dropdown */}
+              <div className="w-full">
+                <button
+                  onClick={() => setOpenDropdown(openDropdown === 'coupons' ? null : 'coupons')}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-base font-medium rounded-lg transition-all duration-200 hover:scale-[1.02] transform ${
+                    activeTab.startsWith('coupons')
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-foreground hover:bg-accent'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <svg className="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                    Coupons
+                  </div>
+                  <svg className={`h-4 w-4 transition-transform duration-200 ${openDropdown === 'coupons' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {openDropdown === 'coupons' && (
+                  <div className="ml-8 mt-1 space-y-1 animate-fadeInSlideDown">
+                    <button
+                      onClick={() => {
+                        router.push('/admin/coupons');
+                        setOpenDropdown(null);
+                        if (window.innerWidth < 768) toggleMobileMenu();
+                      }}
+                      className="w-full flex items-center px-4 py-2 text-sm font-medium rounded-lg text-foreground hover:bg-accent transition-colors duration-200"
+                    >
+                      <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Create Coupon
                     </button>
                   </div>
                 )}
@@ -463,7 +492,7 @@ export default function AdminLayout({
                     }`}
                   >
                     <svg className="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2V7a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                     </svg>
                     Server Info
                   </button>

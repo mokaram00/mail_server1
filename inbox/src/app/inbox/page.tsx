@@ -69,49 +69,41 @@ export default function Inbox() {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+const formatEmailAddress = (emailAddress: string | undefined): { name: string, email: string } => {
+  if (!emailAddress) {
+    return { name: 'Unknown Sender', email: 'unknown@example.com' };
+  }
 
-  // Function to format email addresses by removing quotes and angle brackets
-  const formatEmailAddress = (emailAddress: string | undefined) => {
-    if (!emailAddress) return 'Unknown Sender';
+  let formatted = emailAddress.trim();
+
+  // Handle quoted names (both regular and smart quotes)
+  // Match pattern: "Name" <email@domain.com> or 'Name' <email@domain.com>
+  const quotedPattern = /^["']?(.*?)["']?\s*<([^>]+)>$/;
+  const match = formatted.match(quotedPattern);
+  
+  if (match) {
+    const name = match[1].trim();
+    const email = match[2].trim();
     
-    // Trim whitespace
-    let formatted = emailAddress.trim();
-    
-    // Handle the specific case from the example: ""Maryam Alzein" <mo-zein@outlook.com>"
-    // Remove surrounding double quotes if present
-    if (formatted.startsWith('""') && formatted.endsWith('"')) {
-      formatted = formatted.substring(2, formatted.length - 1);
-    } else if (formatted.startsWith('"') && formatted.endsWith('"')) {
-      formatted = formatted.substring(1, formatted.length - 1);
+    // If name is empty or just whitespace, use email as name
+    if (!name) {
+      return { name: email, email };
     }
     
-    // Extract email address from angle brackets if present
-    const bracketMatch = formatted.match(/<([^>]+)>/);
-    if (bracketMatch) {
-      // If we have both name and email like "Name" <email@domain.com>
-      const emailPart = bracketMatch[1];
-      // If we had a name part before the email, use it; otherwise use the email
-      const namePart = formatted.replace(/<[^>]+>/, '').trim();
-      return namePart || emailPart;
+    return { name, email };
+  }
+
+  // Handle unquoted email addresses
+  if (formatted.includes('@')) {
+    // Check if it looks like a simple email address
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emailPattern.test(formatted)) {
+      return { name: formatted, email: formatted };
     }
-    
-    // If it's just an email address, return as is
-    return formatted || 'Unknown Sender';
-  };
-
-  // Copy to clipboard function with animation
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopyStatus('copied');
-      // Reset back to 'copy' after 2 seconds
-      setTimeout(() => {
-        setCopyStatus('copy');
-      }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy: ', err);
-    });
-  };
-
+  }
+  // Just a name without email
+  return { name: formatted, email: 'unknown@example.com' };
+};
   // Initialize WebSocket connection - only when userId is available
   const { socket, connected } = useWebSocket(userId);
   
@@ -332,6 +324,13 @@ export default function Inbox() {
       // Set the email being selected for animation
       setSelectingEmailId(email._id);
       
+      // Debug the email data
+      console.log('Selected email data:', email);
+      console.log('fromAddress:', email.fromAddress);
+      console.log('Formatted fromAddress:', formatEmailAddress(email.fromAddress));
+      console.log('toAddress:', email.toAddress);
+      console.log('Formatted toAddress:', formatEmailAddress(email.toAddress));
+      
       // Check if we're switching between emails
       const isSwitching = selectedEmail !== null;
       
@@ -343,6 +342,15 @@ export default function Inbox() {
       
       // First, fetch the new email data from the backend
       const response = await apiClient.getEmailById(email._id);
+      
+      // Debug the response data
+      console.log('Email response data:', response);
+      if (response.email) {
+        console.log('Response email fromAddress:', response.email.fromAddress);
+        console.log('Formatted response email fromAddress:', formatEmailAddress(response.email.fromAddress));
+        console.log('Response email toAddress:', response.email.toAddress);
+        console.log('Formatted response email toAddress:', formatEmailAddress(response.email.toAddress));
+      }
       
       if (isSwitching) {
         // For email switching, load content first then animate
@@ -647,7 +655,7 @@ export default function Inbox() {
             <div className="flex items-center">
               <div className="h-12 w-12 rounded-full bg-foreground flex items-center justify-center transition-transform duration-300 hover:scale-110 shadow-lg animate-pulseGlow">
                 <span className="text-lg font-bold text-background">
-                  {userProfile?.email?.charAt(0)?.toUpperCase() || 'U'}
+                  {userProfile?.email?.charAt(0) || 'U'}
                 </span>
               </div>
               <div className="ml-3">
@@ -788,7 +796,7 @@ export default function Inbox() {
                               <div className="flex-shrink-0 mr-3">
                                 <div className="h-10 w-10 rounded-full bg-foreground/10 flex items-center justify-center">
                                   <span className="text-sm font-medium text-foreground">
-                                    {formatEmailAddress(email.fromAddress).charAt(0)?.toUpperCase() || 'U'}
+                                    {formatEmailAddress(email.fromAddress).name.charAt(0) || 'U'}
                                   </span>
                                 </div>
                               </div>
@@ -797,7 +805,7 @@ export default function Inbox() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center">
                                     <p className={`text-sm truncate ${email.isRead ? 'text-foreground/70' : 'text-foreground font-bold'}`}>
-                                      {formatEmailAddress(email.fromAddress)}
+                                      {formatEmailAddress(email.fromAddress).name} {formatEmailAddress(email.fromAddress).email} 
                                     </p>
                                     {!email.isRead && (
                                       <span className="ml-2 h-2 w-2 rounded-full bg-foreground"></span>
@@ -907,12 +915,12 @@ export default function Inbox() {
                     <div className="flex items-start animate-fadeInSlideRight delay-150">
                       <div className="h-10 w-10 rounded-full bg-foreground/10 flex items-center justify-center mr-3 flex-shrink-0 animate-bounceIn">
                         <span className="text-base font-bold text-foreground">
-                          {formatEmailAddress(selectedEmail?.fromAddress).charAt(0)?.toUpperCase() || 'U'}
+                          {formatEmailAddress(selectedEmail?.fromAddress).name.charAt(0) || 'U'}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold text-foreground truncate text-base">{formatEmailAddress(selectedEmail?.fromAddress)}</div>
-                        <div className="text-sm text-foreground/70 truncate">to {formatEmailAddress(selectedEmail?.toAddress)}</div>
+                        <div className="font-bold text-foreground truncate text-base">{formatEmailAddress(selectedEmail?.fromAddress).name}</div>
+                        <div className="text-sm text-foreground/70 truncate">from {formatEmailAddress(selectedEmail?.fromAddress).email} to {formatEmailAddress(selectedEmail?.toAddress).email}</div>
                         
                         {/* Magic Link Expiration Timer - In email view */}
                         {timeRemaining !== null && timeRemaining > 0 && (

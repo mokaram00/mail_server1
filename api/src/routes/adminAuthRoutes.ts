@@ -8,9 +8,9 @@ const router = express.Router();
 router.post('/login', adminLogin);
 
 // Protected routes
-router.get('/profile', adminAuth, getAdminProfile);
-router.put('/profile', adminAuth, updateAdminProfile);
-router.put('/profile/password', adminAuth, updateAdminPassword);
-router.post('/logout', adminAuth, adminLogout);
+router.get('/profile', adminAuth('admin'), getAdminProfile);
+router.put('/profile', adminAuth('admin'), updateAdminProfile);
+router.put('/profile/password', adminAuth('admin'), updateAdminPassword);
+router.post('/logout', adminAuth('admin'), adminLogout);
 
 export default router;

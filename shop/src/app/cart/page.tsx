@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useCart } from '@/lib/cart-context';
 import { useAuth } from '@/lib/auth-context';
 import { useState } from 'react';
-import { FaShoppingCart, FaWrench, FaUniversity, FaCheckCircle } from 'react-icons/fa';
+import { FaShoppingCart, FaWrench, FaCheckCircle } from 'react-icons/fa';
+import apiClient from '../../lib/apiClient';
 
 export default function CartPage() {
   const { state, removeItem, updateQuantity, clearCart } = useCart();
   const { user, loading: authLoading } = useAuth();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const selectedPaymentMethod = 'polar';
   const paymentMethods = [
     {
@@ -25,45 +27,23 @@ export default function CartPage() {
   const handleCheckout = async () => {
     if (state.items.length === 0) return;
 
+    // If user is not authenticated, show auth modal
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     setIsCheckingOut(true);
     try {
-      const authHeader = localStorage.getItem('access_token') ? `Bearer ${localStorage.getItem('access_token')}` : null;
+      const response = await apiClient.createCheckoutSession({ items: state.items, paymentMethod: selectedPaymentMethod });
 
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authHeader && { 'Authorization': authHeader }),
-        },
-        body: JSON.stringify({
-          items: state.items,
-          paymentMethod: selectedPaymentMethod,
-        }),
-      });
-
-      if (response.ok) {
-        const { url } = await response.json();
-        // Show user feedback before opening Polar Checkout
-        alert('Opening Polar Checkout in a popup window...');
-        // Open Polar Checkout in popup window
-        const popup = window.open(
-          url,
-          'polar',
-          'width=800,height=600,scrollbars=yes,resizable=yes,status=yes,location=yes,toolbar=yes,menubar=yes'
-        );
-
-        // Check if popup was blocked
-        if (!popup) {
-          alert('Popup window was blocked. Please allow popups for this site.');
-          // Fallback to new tab
-          window.open(url, '_blank');
-        }
-      } else {
-        alert('Error creating checkout session');
+      if (response.message) {
+        // For now, we'll just show a success message
+        alert('Checkout created successfully!');
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Server error occurred');
+      alert('Failed to create checkout. Please try again.');
     } finally {
       setIsCheckingOut(false);
     }
@@ -75,44 +55,14 @@ export default function CartPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking authentication...</p>
+          <p className="text-gray-600">Loading cart...</p>
         </div>
       </div>
     );
   }
 
-  // Require authentication to access cart
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-6">
-          <FaShoppingCart className="text-gray-400 text-8xl mb-6" />
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-black bg-clip-text text-transparent mb-4">
-            Please log in
-          </h1>
-          <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-            You need to be logged in to access your cart and shop
-          </p>
-          <div className="space-y-4">
-            <Link
-              href="/login"
-              className="inline-block bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-semibold shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300"
-            >
-              Log in
-            </Link>
-            <div>
-              <Link
-                href="/register"
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors duration-200"
-              >
-                Don't have an account? Register now
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Remove the authentication requirement - users can now access cart without logging in
+  // But we'll prompt for authentication during checkout
 
   if (state.items.length === 0) {
     return (
@@ -170,6 +120,22 @@ export default function CartPage() {
                             src={item.image}
                             alt={item.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Replace with placeholder when image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.parentElement!.innerHTML = `
+                                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                  <div class="text-center">
+                                    <div class="w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-400 rounded-lg mx-auto mb-1 flex items-center justify-center">
+                                      <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                    </div>
+                                    <p class="text-xs font-medium text-gray-600">No Image</p>
+                                  </div>
+                                </div>
+                              `;
+                            }}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -257,7 +223,7 @@ export default function CartPage() {
                     return (
                       <div
                         key={method.id}
-                        className="flex items-center p-3 rounded-lg border-2 border-black bg-gray-50 shadow-lg"
+                        className="flex items-center p-3 rounded-lg border-2 border-gray-200 bg-gray-50"
                       >
                         <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${method.color} flex items-center justify-center mr-3 rtl:ml-3 rtl:mr-0`}>
                           <Icon className="w-4 h-4 text-white" />
@@ -273,7 +239,6 @@ export default function CartPage() {
                                 {method.description}
                               </p>
                             </div>
-                            <FaCheckCircle className="w-4 h-4 text-green-600" />
                           </div>
                         </div>
                       </div>
@@ -287,7 +252,7 @@ export default function CartPage() {
                 disabled={isCheckingOut}
                 className="w-full bg-gradient-to-r from-black to-gray-800 text-white py-3 rounded-xl text-sm font-semibold shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300 disabled:bg-gray-400 disabled:transform-none"
               >
-                {isCheckingOut ? 'Processing...' : 'Pay with Polar'}
+                {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
               </button>
 
               <div className="mt-4 text-center">
@@ -302,6 +267,63 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      {/* Authentication Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-md w-full transform transition-all duration-300 scale-100">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="mx-auto bg-gradient-to-br from-blue-100 to-blue-200 w-16 h-16 rounded-2xl flex items-center justify-center mb-4">
+                  <FaShoppingCart className="text-blue-600 text-2xl" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Complete Your Purchase
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Please log in or register to complete your purchase
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <Link
+                  href="/login"
+                  className="block w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-center px-4 py-3 rounded-xl text-sm font-semibold shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300"
+                  onClick={() => setShowAuthModal(false)}
+                >
+                  Log in
+                </Link>
+                
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white px-2 text-gray-500">OR</span>
+                  </div>
+                </div>
+
+                <Link
+                  href="/register"
+                  className="block w-full bg-gradient-to-r from-black to-gray-800 text-white text-center px-4 py-3 rounded-xl text-sm font-semibold shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300"
+                  onClick={() => setShowAuthModal(false)}
+                >
+                  Register New Account
+                </Link>
+              </div>
+
+              <div className="mt-6">
+                <button
+                  onClick={() => setShowAuthModal(false)}
+                  className="w-full text-gray-500 hover:text-gray-700 text-sm font-medium py-2 transition-colors duration-200"
+                >
+                  Continue Shopping
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

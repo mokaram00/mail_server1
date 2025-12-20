@@ -24,6 +24,7 @@ interface Email {
   username: string;
   email: string;
   isActive: boolean;
+  isConnected?: boolean; // New field for connection status
   domain?: string;
   isDefaultDomain?: boolean;
   accountClassification?: string;
@@ -129,7 +130,7 @@ export default function EmailsManagement() {
       // Map emails to ensure they have the correct id field
       const mappedEmails = data.emails.map((email: any) => ({
         ...email,
-            }));
+      }));
       
       setEmails(mappedEmails);
     } catch (err) {
@@ -239,17 +240,38 @@ export default function EmailsManagement() {
     }
   };
 
+  const updateEmailConnectionStatus = async (emailId: number | string, isConnected: boolean) => {
+    // Debug: Check if emailId is valid
+    console.log('Updating email connection status for ID:', emailId, 'to:', isConnected);
+    if (!emailId) {
+      showToast('Invalid email ID', 'error');
+      return;
+    }
+    
+    try {
+      const response = await apiClient.put(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/emails/${emailId}/connection-status`, { isConnected });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update email connection status');
+      }
+      
+      const data = await response.json();
+      // Update email in state
+      setEmails(emails.map(email => 
+        email._id === emailId ? { ...email, isConnected: data.user.isConnected } : email
+      ));
+      
+      showToast(`Email ${isConnected ? 'connected' : 'disconnected'} successfully`, 'success');
+    } catch (err) {
+      showToast('Failed to update email connection status', 'error');
+      console.error('Error updating email connection status:', err);
+    }
+  };
+
   // Send magic link to email
   const sendMagicLink = async (email: Email) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/magic-link/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email: email.email }),
-      });
+      const response = await apiClient.post(`${process.env.NEXT_PUBLIC_API_URL}/api/magic-link/generate`, { email: email.email });
       
       if (!response.ok) {
         const data = await response.json();
@@ -551,6 +573,7 @@ export default function EmailsManagement() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Domain</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Classification</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Connection</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-foreground/70 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -599,6 +622,15 @@ export default function EmailsManagement() {
                           : 'bg-destructive/10 text-destructive'
                       }`}>
                         {email.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                        email.isConnected 
+                          ? 'bg-green-500/10 text-green-500' 
+                          : 'bg-yellow-500/10 text-yellow-500'
+                      }`}>
+                        {email.isConnected ? 'Connected' : 'Disconnected'}
                       </span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
@@ -661,6 +693,21 @@ export default function EmailsManagement() {
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                          </svg>
+                        </button>
+                        
+                        {/* Connection status toggle */}
+                        <button
+                          onClick={() => updateEmailConnectionStatus(email._id, !email.isConnected)}
+                          className={`p-1 rounded transition-colors duration-200 ${email.isConnected ? 'text-yellow-500 hover:bg-yellow-500/20' : 'text-green-500 hover:bg-green-500/20'}`}
+                          title={email.isConnected ? 'Mark as disconnected' : 'Mark as connected'}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {email.isConnected ? (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                            ) : (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                            )}
                           </svg>
                         </button>
                       </div>

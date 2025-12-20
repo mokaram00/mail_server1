@@ -7,6 +7,7 @@ export interface IEmails extends Document {
   email: string;
   password: string;
   isActive: boolean;
+  isConnected?: boolean; // New field to track connection status
   domain?: string;
   accountClassification?: string;
   description?: string;  // Optional description field
@@ -50,6 +51,10 @@ const EmailsSchema: Schema<IEmails> = new Schema({
   accountClassification: {
     type: String,
     trim: true
+  },
+  isConnected: {
+    type: Boolean,
+    default: false // Default to false (not connected)
   },
   description: {
     type: String,

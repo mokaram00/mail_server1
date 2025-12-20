@@ -5,6 +5,11 @@ import Emails from '../models/Emails';
 import Mailbox from '../models/Mailbox';
 import Domain from '../models/Domain';
 import Category from '../models/Category';
+import Order from '../models/Order';
+import Product from '../models/Product';
+import { User } from '../models/User';
+import { sendPurchaseEmails } from '../utils/purchaseEmails.js';
+import { IProduct } from '../models/Product';
 
 // Extend the Request type to include admin property
 interface AdminAuthRequest extends Request {
@@ -173,6 +178,7 @@ export const updateUserClassification = async (req: Request, res: Response): Pro
         username: user.username,
         email: user.email,
         accountClassification: user.accountClassification,
+        isConnected: user.isConnected,
       },
     });
   } catch (error) {
@@ -208,10 +214,43 @@ export const deactivateUser = async (req: AdminAuthRequest, res: Response): Prom
         username: user.username,
         email: user.email,
         isActive: user.isActive,
+        isConnected: user.isConnected,
       },
     });
   } catch (error) {
     console.error('Deactivate user error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Update user connection status
+export const updateUserConnectionStatus = async (req: AdminAuthRequest,  res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { isConnected } = req.body;
+
+    // Find user by ID
+    const user = await Emails.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update user connection status
+    user.isConnected = isConnected;
+    await user.save();
+
+    return res.status(200).json({
+      message: 'User connection status updated successfully',
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        isConnected: user.isConnected,
+      },
+    });
+  } catch (error) {
+    console.error('Update user connection status error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -350,6 +389,7 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
       username: user.username,
       email: user.email,
       isActive: user.isActive,
+      isConnected: user.isConnected,
       domain: user.domain,
       accountClassification: user.accountClassification,
     };
@@ -471,6 +511,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
         email: user.email,
         password: hashedPassword,
         isActive: true, // Default active status
+        isConnected: false, // Default connection status
         domain: user.domain || null,
         accountClassification: user.accountClassification || null,
       });
@@ -486,6 +527,7 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
       username: user.username,
       email: user.email,
       isActive: user.isActive,
+      isConnected: user.isConnected,
       domain: user.domain,
       accountClassification: user.accountClassification,
     }));
@@ -788,6 +830,61 @@ export const addAccountClassification = async (req: Request, res: Response): Pro
     });
   } catch (error) {
     console.error('Add classification error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Update order status
+export const updateOrderStatus = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+
+    // Find order by ID
+    const order = await Order.findById(id).populate('items.product').populate('user');
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Store previous status
+    const previousStatus = order.status;
+
+    // Update order status
+    order.status = status;
+    await order.save();
+
+    // If status changed to 'delivered', send purchase emails
+    if (previousStatus !== 'delivered' && status === 'delivered') {
+      try {
+        // Get user details
+        const user = await User.findById(order.user);
+        if (user) {
+          // Get product details
+          const productIds = order.items.map((item: any) => item.product._id);
+          const products: IProduct[] = await Product.find({ '_id': { $in: productIds } });
+          
+          // Send purchase emails
+          await sendPurchaseEmails(user, order, products);
+        }
+      } catch (emailError) {
+        console.error('Failed to send purchase emails:', emailError);
+        // Don't fail the status update if emails fail to send
+      }
+    }
+
+    return res.status(200).json({ 
+      message: 'Order status updated successfully',
+      order 
+    });
+  } catch (error) {
+    console.error('Update order status error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };

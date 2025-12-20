@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, isAuthenticated, signOut } from '@/lib/auth-utils';
+import SubdomainLink from '../components/SubdomainLink'
 
 export default function Header() {
   const { state } = useCart();
@@ -84,6 +84,7 @@ export default function Header() {
       setIsUserMenuOpen(false);
       // Use client-side navigation instead of page reload
       router.push('/');
+      router.refresh();
     } catch (error) {
       console.error('Error logging out:', error);
       // Fallback to manual cleanup
@@ -95,9 +96,9 @@ export default function Header() {
       setIsUserMenuOpen(false);
       // Use client-side navigation even on error
       router.push('/');
+      router.refresh();
     }
   };
-
   return (
     <header className="relative bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white shadow-2xl border-b border-gray-700 z-50">
       {/* Subtle background pattern */}
@@ -113,7 +114,7 @@ export default function Header() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-6">
           {/* Elegant Logo */}
-          <Link href="/" className="group">
+          <SubdomainLink href="/" className="group">
             <div className="flex items-center space-x-4 rtl:space-x-reverse">
               <div className="relative">
                 {/* 3D Logo Container */}
@@ -138,7 +139,7 @@ export default function Header() {
 
               <div className="hidden sm:block">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent group-hover:from-gray-200 group-hover:via-white group-hover:to-gray-200 transition-all duration-300">
-                  ReversEl Shop
+                  Bltnm Shop
                 </h1>
                 <p className="text-xs text-gray-400 opacity-80 group-hover:opacity-100 transition-opacity">Premium Tools & Design</p>
               </div>
@@ -146,129 +147,62 @@ export default function Header() {
               {/* Mobile logo text */}
               <div className="sm:hidden">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
-                  RS
+                  BS
                 </h1>
               </div>
             </div>
-          </Link>
+          </SubdomainLink>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8 rtl:space-x-reverse">
-            <Link href="/" className="relative group py-2">
+            <SubdomainLink href="/" className="relative group py-2">
               <span className="text-white hover:text-gray-300 transition-colors duration-300 font-medium relative">
                 Home
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-white to-gray-300 group-hover:w-full transition-all duration-300"></div>
               </span>
-            </Link>
-            <Link href="/products" className="relative group py-2">
-              <span className="text-white hover:text-gray-300 transition-colors duration-300 font-medium relative">
-                Products
-                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-white to-gray-300 group-hover:w-full transition-all duration-300"></div>
-              </span>
-            </Link>
-            <Link href="/contact" className="relative group py-2">
-              <span className="text-white hover:text-gray-300 transition-colors duration-300 font-medium relative">
-                Contact
-                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-white to-gray-300 group-hover:w-full transition-all duration-300"></div>
-              </span>
-            </Link>
-
-            {/* Authentication Section */}
-            {isAuth ? (
-              <>
-                {/* User Menu */}
-                <div className="relative user-menu-container">
-                  <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-3 rtl:space-x-reverse bg-white/5 backdrop-blur-sm border border-white/10 rounded-full px-4 py-3 hover:bg-white/10 transition-all duration-300 transform hover:scale-105"
-                  >
-                    <div className="w-8 h-8 bg-gradient-to-br from-white to-gray-300 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-black">
-                        {user?.fullName?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                    <span className="font-medium text-sm">{user?.fullName || user?.name || 'User'}</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {/* User Dropdown */}
-                  {isUserMenuOpen && (
-                    <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-[100]">
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">{user?.fullName || user?.name || 'User'}</p>
-                        <p className="text-sm text-gray-500">{user?.email}</p>
-                      </div>
-
-                      <div className="py-1">
-                        <Link href="/profile" onClick={closeUserMenu} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                          Profile
-                        </Link>
-                        <Link href="/orders" onClick={closeUserMenu} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                          Orders
-                        </Link>
-                        {user?.role === 'admin' && (
-                          <Link href="/admin" onClick={closeUserMenu} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                            Dashboard
-                          </Link>
+            </SubdomainLink>
+    
+              <SubdomainLink href="/products" className="relative group py-2">
+                <span className="text-white hover:text-gray-300 transition-colors duration-300 font-medium relative">
+                  Products
+                  <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-white to-gray-300 group-hover:w-full transition-all duration-300"></div>
+                </span>
+              </SubdomainLink>
+        
+              <div className="flex items-center space-x-4 rtl:space-x-reverse">
+                  <SubdomainLink href="/cart" className="relative group">
+                    <div className={`flex items-center space-x-3 rtl:space-x-reverse bg-white/5 backdrop-blur-sm border border-white/10 rounded-full px-5 py-3 hover:bg-white/10 transition-all duration-300 transform hover:scale-105 ${isCartAnimating ? 'animate-cart-bounce' : ''}`}>
+                      <div className="relative">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                          stroke="currentColor"
+                          className="w-6 h-6"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M2.25 2.25h1.386c.51 0 .955.343 1.09.835l.383 1.436m0 0L6.75 14.25h10.5l2.25-9H5.109m0 0L4.5 4.5m2.25 9.75a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm9 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"
+                          />
+                        </svg>
+                        {state.itemCount > 0 && (
+                          <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-white to-gray-300 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-black">{state.itemCount}</span>
+                          </div>
                         )}
                       </div>
-
-                      <div className="border-t border-gray-100 py-1">
-                        <button
-                          onClick={() => {
-                            handleLogout();
-                            closeUserMenu();
-                          }}
-                          className="block w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-                        >
-                          Logout
-                        </button>
-                      </div>
+                      <span className="font-medium text-sm">Cart</span>
                     </div>
-                  )}
-                </div>
-
-                {/* Cart Button - Only show if authenticated */}
-                <Link href="/cart" className="relative group">
-                  <div className={`flex items-center space-x-3 rtl:space-x-reverse bg-white/5 backdrop-blur-sm border border-white/10 rounded-full px-5 py-3 hover:bg-white/10 transition-all duration-300 transform hover:scale-105 ${isCartAnimating ? 'animate-cart-bounce' : ''}`}>
-                    <div className="relative">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                        className="w-6 h-6"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M2.25 2.25h1.386c.51 0 .955.343 1.09.835l.383 1.436m0 0L6.75 14.25h10.5l2.25-9H5.109m0 0L4.5 4.5m2.25 9.75a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm9 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"
-                        />
-                      </svg>
-                      {state.itemCount > 0 && (
-                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-white to-gray-300 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-bold text-black">{state.itemCount}</span>
-                        </div>
-                      )}
-                    </div>
-                    <span className="font-medium text-sm">Cart</span>
-                  </div>
-                </Link>
-              </>
-            ) : (
-              /* Authentication Buttons */
-              <div className="flex items-center space-x-4 rtl:space-x-reverse">
-                <Link href="/login" className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all duration-300 transform hover:scale-105">
+                  </SubdomainLink>
+                <SubdomainLink href="/login" className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all duration-300 transform hover:scale-105">
                 Login
-                </Link>
-                <Link href="/register" className="bg-gradient-to-r from-white to-gray-200 text-black px-6 py-2 rounded-full text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                </SubdomainLink>
+                <SubdomainLink href="/register" className="bg-gradient-to-r from-white to-gray-200 text-black px-6 py-2 rounded-full text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                 Register
-                </Link>
+                </SubdomainLink>
               </div>
-            )}
           </nav>
 
           {/* Mobile menu button */}
@@ -288,15 +222,15 @@ export default function Header() {
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-gradient-to-br from-gray-900 to-black backdrop-blur-lg border-t border-white/10">
             <nav className="px-4 py-6 space-y-4">
-              <Link href="/" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
+              <SubdomainLink href="/" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
                 Home
-              </Link>
-              <Link href="/products" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
+              </SubdomainLink>
+              <SubdomainLink href="/products" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
                 Products
-              </Link>
-              <Link href="/contact" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
+              </SubdomainLink>
+              <SubdomainLink href="/contact" className="block text-white hover:text-gray-300 transition-colors duration-200 font-medium py-3 border-b border-white/10">
                 Contact
-              </Link>
+              </SubdomainLink>
 
               {/* Mobile Auth Section */}
               {isAuth ? (
@@ -315,17 +249,16 @@ export default function Header() {
                     </div>
 
                     <div className="space-y-2">
-                      <Link href="/profile" className="block text-white hover:text-gray-300 text-sm py-1">
+                      <SubdomainLink href="/profile" className="block text-white hover:text-gray-300 text-sm py-1">
                       Profile
-                      </Link>
-                      <Link href="/orders" className="block text-white hover:text-gray-300 text-sm py-1">
+                      </SubdomainLink>
+                      <SubdomainLink href="/orders" className="block text-white hover:text-gray-300 text-sm py-1">
                       Orders
-                      </Link>
-                      {user?.role === 'admin' && (
-                        <Link href="/admin" className="block text-white hover:text-gray-300 text-sm py-1">
-                        Dashboard
-                        </Link>
-                      )}
+                      </SubdomainLink>
+                      <SubdomainLink href='dashboard' className="block text-white hover:text-gray-300 text-sm py-1">
+                        Dashboard                        
+                      </SubdomainLink>
+              
                       <button
                         onClick={handleLogout}
                         className="block w-full text-right text-red-400 hover:text-red-300 text-sm py-1"
@@ -334,26 +267,37 @@ export default function Header() {
                       </button>
                     </div>
                   </div>
-
-                  <Link href="/cart" className="block">
-                    <div className={`flex items-center justify-between bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-all duration-300 ${isCartAnimating ? 'animate-cart-bounce' : ''}`}>
-                      <span className="text-white font-medium">Cart</span>
-                      {state.itemCount > 0 && (
-                        <span className="bg-gradient-to-br from-white to-gray-300 text-black text-sm rounded-full px-2 py-1 font-bold">
-                          {state.itemCount}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
+                    <SubdomainLink href="/cart" className="block">
+                      <div className={`flex items-center justify-between bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-all duration-300 ${isCartAnimating ? 'animate-cart-bounce' : ''}`}>
+                        <span className="text-white font-medium">Cart</span>
+                        {state.itemCount > 0 && (
+                          <span className="bg-gradient-to-br from-white to-gray-300 text-black text-sm rounded-full px-2 py-1 font-bold">
+                            {state.itemCount}
+                          </span>
+                        )}
+                      </div>
+                    </SubdomainLink>
                 </>
               ) : (
                 <div className="space-y-3">
-                  <Link href="/login" className="block w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-center px-4 py-3 rounded-lg hover:bg-white/20 transition-all duration-300">
+                  {/* Show cart button only on shop and main domains */}
+                  
+                    <SubdomainLink href="/cart" className="block">
+                      <div className={`flex items-center justify-between bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-all duration-300 ${isCartAnimating ? 'animate-cart-bounce' : ''}`}>
+                        <span className="text-white font-medium">Cart</span>
+                        {state.itemCount > 0 && (
+                          <span className="bg-gradient-to-br from-white to-gray-300 text-black text-sm rounded-full px-2 py-1 font-bold">
+                            {state.itemCount}
+                          </span>
+                        )}
+                      </div>
+                    </SubdomainLink>
+                  <SubdomainLink href="/login" className="block w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-center px-4 py-3 rounded-lg hover:bg-white/20 transition-all duration-300">
                     Login
-                  </Link>
-                  <Link href="/register" className="block w-full bg-gradient-to-r from-white to-gray-200 text-black text-center px-4 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                  </SubdomainLink>
+                  <SubdomainLink href="/register" className="block w-full bg-gradient-to-r from-white to-gray-200 text-black text-center px-4 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
                     Register
-                  </Link>
+                  </SubdomainLink>
                 </div>
               )}
             </nav>

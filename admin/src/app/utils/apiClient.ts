@@ -16,7 +16,7 @@ export const apiClient = {
   get: async (url: string) => {
     const response = await fetch(url, {
       method: 'GET',
-      credentials: 'include',
+      credentials: 'include', // This ensures cookies are sent with the request
       headers: {
         'Content-Type': 'application/json',
       },
@@ -34,7 +34,7 @@ export const apiClient = {
   post: async (url: string, data: any) => {
     const response = await fetch(url, {
       method: 'POST',
-      credentials: 'include',
+      credentials: 'include', // This ensures cookies are sent with the request
       headers: {
         'Content-Type': 'application/json',
         ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
@@ -54,7 +54,7 @@ export const apiClient = {
   put: async (url: string, data: any) => {
     const response = await fetch(url, {
       method: 'PUT',
-      credentials: 'include',
+      credentials: 'include', // This ensures cookies are sent with the request
       headers: {
         'Content-Type': 'application/json',
         ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
@@ -74,7 +74,7 @@ export const apiClient = {
   delete: async (url: string) => {
     const response = await fetch(url, {
       method: 'DELETE',
-      credentials: 'include',
+      credentials: 'include', // This ensures cookies are sent with the request
       headers: {
         'Content-Type': 'application/json',
         ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),

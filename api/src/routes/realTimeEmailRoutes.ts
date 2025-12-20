@@ -5,7 +5,7 @@ import auth from '../middleware/auth';
 const router = express.Router();
 
 // Apply authentication middleware to all routes
-router.use(auth);
+router.use(auth('inbox'));
 
 // Get all emails for the authenticated user
 router.get('/', getUserEmails);

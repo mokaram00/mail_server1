@@ -120,20 +120,31 @@ export const verifyMagicLink = async (req: Request, res: Response): Promise<Resp
 
     await magicLink.save();
 
-    // Generate JWT token
+    // Determine user type
+    const isAdmin = await Admin.findById(user._id);
+    
+    // Generate appropriate JWT token
+    let jwtPayload;
+    if (isAdmin) {
+      jwtPayload = { adminId: user._id };
+    } else {
+      jwtPayload = { userId: user._id };
+    }
+    
     const jwtToken = jwt.sign(
-      { userId: user._id },
+      jwtPayload,
       process.env.JWT_SECRET || 'fallback_secret_key',
       { expiresIn: '24h' }
     );
+      // Inbox token - only valid on inbox subdomain
+      res.cookie('inbox_token', jwtToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'lax',
+        domain: 'inbox.bltnm.store'
+      });
 
-    // Set token in cookie
-    res.cookie('token', jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'strict'
-    });
 
     return res.status(200).json({
       message: 'Login successful',

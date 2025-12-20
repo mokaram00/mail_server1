@@ -2,29 +2,11 @@
 
 export interface User {
   id: string;
-  supabaseId: string;
   name?: string;
   email: string;
-  role: string;
-  phone?: string;
-  address?: {
-    street?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    country?: string;
-  };
-  preferences?: {
-    language: 'ar' | 'en';
-    currency: 'SAR' | 'USD';
-    notifications: {
-      email: boolean;
-      sms: boolean;
-      push: boolean;
-    };
-  };
   createdAt: string;
   fullName?: string;
+  avatar?: string;
 }
 
 /**
@@ -41,7 +23,7 @@ export async function getCurrentUser(): Promise<User | null> {
     }
 
     // Call our API to get user info (which will verify the token with Supabase)
-    const response = await fetch('/api/auth/me', {
+    const response = await fetch('/api/user/profile', {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -72,7 +54,7 @@ export async function getCurrentUser(): Promise<User | null> {
           }
 
           // Retry getting user info
-          const retryResponse = await fetch('/api/auth/me', {
+          const retryResponse = await fetch('/api/user/profile', {
             headers: {
               'Authorization': `Bearer ${refreshData.access_token}`,
               'Content-Type': 'application/json',

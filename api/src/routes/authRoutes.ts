@@ -8,7 +8,7 @@ const router = express.Router();
 router.post('/login', login);
 
 // Protected routes
-router.get('/profile', auth, getProfile);
-router.post('/logout', auth, logout);
+router.get('/profile', auth('inbox'), getProfile);
+router.post('/logout', auth('inbox'), logout);
 
 export default router;

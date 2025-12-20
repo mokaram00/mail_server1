@@ -1,16 +1,16 @@
 module.exports = {
   apps: [
     {
-      name: 'mail-server-admin',
+      name: 'admin',
       cwd: './admin',
       script: 'npm',
-      args: 'start',
-      env_production: {
-        NODE_ENV: 'production',
+      args: 'run dev',
+      env: {
+        NODE_ENV: 'development',
         PORT: 3001
       },
-      env_development: {
-        NODE_ENV: 'development',
+      env_production: {
+        NODE_ENV: 'production',
         PORT: 3001
       },
       instances: 1,
@@ -23,17 +23,18 @@ module.exports = {
       time: true
     },
     {
-      name: 'mail-server-api',
+      name: 'api',
       cwd: './api',
-      script: 'dist/server.js',
+      script: 'npm',
+      args: 'run dev',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3001
+      },
       env_production: {
         NODE_ENV: 'production',
         PORT: 3000
       },
-      env_development: {
-        NODE_ENV: 'development',
-        PORT: 3000
-      },    
       instances: 1,
       autorestart: true,
       watch: false,
@@ -44,16 +45,16 @@ module.exports = {
       time: true
     },
     {
-      name: 'mail-server-inbox',
+      name: 'inbox',
       cwd: './inbox',
       script: 'npm',
-      args: 'start',
-      env_production: {
-        NODE_ENV: 'production',
+      args: 'run dev',
+      env: {
+        NODE_ENV: 'development',
         PORT: 3002
       },
-      env_development: {
-        NODE_ENV: 'development',
+      env_production: {
+        NODE_ENV: 'production',
         PORT: 3002
       },
       instances: 1,
@@ -66,16 +67,16 @@ module.exports = {
       time: true
     },
     {
-      name: 'mail-server-shop',
+      name: 'shop',
       cwd: './shop',
       script: 'npm',
-      args: 'start',
-      env_production: {
-        NODE_ENV: 'production',
+      args: 'run dev',
+      env: {
+        NODE_ENV: 'development',
         PORT: 3003
       },
-      env_development: {
-        NODE_ENV: 'development',
+      env_production: {
+        NODE_ENV: 'production',
         PORT: 3003
       },
       instances: 1,

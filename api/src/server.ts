@@ -36,23 +36,40 @@ io.on('connection', (socket: any) => {
     connectedClients.delete(socket.id);
     console.log(`User disconnected: ${socket.id}`);
   });
+  
+  // Handle errors
+  socket.on('error', (error: any) => {
+    console.error(`WebSocket error for socket ${socket.id}:`, error);
+  });
 });
 
 // Function to notify clients of new emails
 export const notifyNewEmail = (userId: string, email: any) => {
-  console.log(`Notifying user ${userId} of new email:`, email.subject);
-  
-  // Find all sockets for this user
-  connectedClients.forEach((connectedUserId, socketId) => {
-    if (connectedUserId === userId) {
-      const socket = io.sockets.sockets.get(socketId);
-      if (socket) {
-        socket.emit('newEmail', email);
-        console.log(`Sent newEmail notification to socket ${socketId} for user ${userId}`);
+  try {
+    console.log(`Notifying user ${userId} of new email:`, email.subject);
+    
+    // Find all sockets for this user
+    connectedClients.forEach((connectedUserId, socketId) => {
+      if (connectedUserId === userId) {
+        const socket = io.sockets.sockets.get(socketId);
+        if (socket) {
+          socket.emit('newEmail', email);
+          console.log(`Sent newEmail notification to socket ${socketId} for user ${userId}`);
+        }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error(`Error notifying user ${userId} of new email:`, error);
+  }
 };
+
+// Add error handling for the HTTP server
+server.on('error', (error: any) => {
+  console.error(`Server error: ${error.message}`);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Please use a different port.`);
+  }
+});
 
 // Connect to MongoDB and start server
 connectDB().then(() => {
@@ -60,17 +77,18 @@ connectDB().then(() => {
     console.log(`Mail server is running on port ${PORT}`);
   
     // Start SMTP server
-    import('./smtp-server')
+    import('./utils/smtp-server')
       .then(() => {
         console.log('SMTP server started');
       })
       .catch((error) => {
         console.error('Failed to start SMTP server:', error);
+        // Don't exit the process, just log the error
       });
   });
 }).catch((error) => {
   console.error('Failed to connect to MongoDB:', error);
-  process.exit(1);
+  // Don't exit the process, just log the error
 });
 
 // Export the app for testing purposes

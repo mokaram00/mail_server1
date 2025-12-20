@@ -16,13 +16,24 @@ import {
   getAdmins,
   updateAdminRole,
   deactivateAdmin,
-  getServerInfo
+  getServerInfo,
+  updateOrderStatus,
+  updateUserConnectionStatus
 } from '../controllers/adminController';
+import { 
+  getAllProducts as adminGetAllProducts,
+  getProductById as adminGetProductById,
+  createProduct as adminCreateProduct,
+  updateProduct as adminUpdateProduct,
+  deleteProduct as adminDeleteProduct
+} from '../controllers/productController';
+import { uploadImages } from '../controllers/uploadController';
+import upload from '../utils/upload';
 import auth from '../middleware/auth';
 const router = express.Router();
 
 // All admin routes require authentication
-router.use(auth);
+router.use(auth('admin')); // فقط admins يمكنهم الوصول
 
 // Admin management routes
 router.get('/admins', getAdmins);
@@ -35,6 +46,17 @@ router.get('/emails/:id', getUserById);
 router.put('/emails/:id/role', updateUserRole);
 router.put('/emails/:id/classification', updateUserClassification);
 router.put('/emails/:id/deactivate', deactivateUser);
+router.put('/emails/:id/connection-status', updateUserConnectionStatus);
+
+// Product management routes
+router.get('/products', adminGetAllProducts);
+router.get('/products/:id', adminGetProductById);
+router.post('/products', adminCreateProduct);
+router.put('/products/:id', adminUpdateProduct);
+router.delete('/products/:id', adminDeleteProduct);
+
+// Order management routes
+router.put('/orders/:id/status', updateOrderStatus);
 
 // System stats route
 router.get('/stats', getSystemStats);
@@ -52,6 +74,9 @@ router.post('/domains', addDomain);
 // Account classification routes
 router.get('/classifications', getAccountClassifications);
 router.post('/classifications', addAccountClassification);
+
+// Upload route
+router.post('/upload', upload.array('images', 10), (req, res) => uploadImages(req, res));
 
 // Server info route (superadmin only)
 router.get('/server-info', getServerInfo);
