@@ -936,7 +936,7 @@ const formatEmailAddress = (emailAddress: string | undefined): { name: string, e
                   </div>
                   
                   {/* Email Body with scrollbars */}
-                  <div className="flex-1 overflow-auto p-4 animate-fadeIn delay-200" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
+                  <div className="flex-1 overflow-auto p-4 animate-fadeIn delay-200 scrollbar scrollbar-thin scrollbar-thumb-rounded-full scrollbar-track-transparent scrollbar-thumb-foreground/30" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
                     {selectedEmail?.body ? (
                       // Check if body contains HTML tags
                       /<[a-z][\s\S]*>/i.test(selectedEmail.body) ? (
