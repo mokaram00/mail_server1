@@ -141,8 +141,7 @@ export const verifyMagicLink = async (req: Request, res: Response): Promise<Resp
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax',
-        domain: 'inbox.bltnm.store'
+        sameSite: 'none',
       });
 
 
