@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'ReversEl Shop - Creative Tools',
-  description: 'E-commerce store for selling creatively designed high-quality tools',
+  title: 'Bltnm Store - Premium Tools & Accessories',
+  description: 'E-commerce store for premium tools and accessories'
 }
 
 export default async function RootLayout({
