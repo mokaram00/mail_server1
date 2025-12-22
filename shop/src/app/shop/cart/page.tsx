@@ -64,6 +64,7 @@ export default function CartPage() {
 
     setIsCheckingOut(true);
     try {
+      // Call the correct endpoint - /api/checkout/ not /api/checkout/create-checkout-session
       const response = await apiClient.createCheckoutSession({ 
         items: state.items, 
         paymentMethod: selectedPaymentMethod,

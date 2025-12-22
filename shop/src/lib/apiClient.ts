@@ -334,7 +334,8 @@ const apiClient = {
   
   // Checkout methods
   createCheckoutSession: async (checkoutData: any): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/api/checkout/create-checkout-session`, {
+    // Call the correct endpoint - /api/checkout/ not /api/checkout/create-checkout-session
+    const response = await fetch(`${API_BASE_URL}/api/checkout/`, {
       method: 'POST',
       credentials: 'include',
       headers: {
