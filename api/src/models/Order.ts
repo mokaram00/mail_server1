@@ -1,15 +1,15 @@
-import mongoose, { Document, Schema } from 'mongoose';
-import { userConnection } from '../config/mongoDb'; // Use user connection
+import { adminConnection } from '../config/mongoDb';
+import { Document, Schema, Types } from 'mongoose';
+import Product, { IProduct } from './Product';
 
 export interface IOrderItem {
-  product: mongoose.Types.ObjectId;
+  product: Types.ObjectId | IProduct;
   quantity: number;
   price: number;
 }
 
 export interface IOrder extends Document {
-  _id: mongoose.Types.ObjectId;
-  user?: mongoose.Types.ObjectId;
+  user: Types.ObjectId;
   items: IOrderItem[];
   totalAmount: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
@@ -22,34 +22,36 @@ export interface IOrder extends Document {
     zipCode: string;
     country: string;
   };
+  // SellAuth integration fields
+  sellAuthInvoiceId?: string;
+  sellAuthCheckoutUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const OrderItemSchema = new Schema<IOrderItem>({
-  product: {
-    type: Schema.Types.ObjectId,
-    ref: 'Product',
-    required: true
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: 0
-  }
-});
-
 const OrderSchema = new Schema<IOrder>({
   user: {
     type: Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: true
   },
-  items: [OrderItemSchema],
+  items: [{
+    product: {
+      type: Schema.Types.ObjectId,
+      ref: 'Product',
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0
+    }
+  }],
   totalAmount: {
     type: Number,
     required: true,
@@ -75,6 +77,13 @@ const OrderSchema = new Schema<IOrder>({
     state: String,
     zipCode: String,
     country: String
+  },
+  // SellAuth integration fields
+  sellAuthInvoiceId: {
+    type: String
+  },
+  sellAuthCheckoutUrl: {
+    type: String
   }
 }, {
   timestamps: true
@@ -85,5 +94,6 @@ OrderSchema.index({ user: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
+OrderSchema.index({ sellAuthInvoiceId: 1 });
 
-export default userConnection.models.Order || userConnection.model<IOrder>('Order', OrderSchema);
+export default adminConnection.models.Order || adminConnection.model<IOrder>('Order', OrderSchema);

@@ -131,26 +131,41 @@ export const updateProduct = async (req: AdminAuthRequest, res: Response): Promi
       return res.status(400).json({ message: 'Invalid product ID' });
     }
     
-    // Find and update product
-    const product = await Product.findByIdAndUpdate(
-      id,
-      {
-        name,
-        description,
-        price,
-        stock,
-        featured,
-        productType,
-        selectedEmails: productType === 'accounts' ? selectedEmails : undefined,
-        images: Array.isArray(images) ? images : undefined
-      },
-      { new: true, runValidators: true }
-    );
-    
+    // Find the product
+    const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
     
+    // Update product fields
+    product.name = name || product.name;
+    product.description = description || product.description;
+    product.price = price !== undefined ? price : product.price;
+    product.stock = stock !== undefined ? parseInt(stock) : product.stock;
+    product.featured = featured !== undefined ? (featured === 'true' || featured === true) : product.featured;
+    product.productType = productType || product.productType;
+    product.images = Array.isArray(images) ? images : product.images;
+    
+    // Handle selected emails for accounts product type
+    if (productType === 'accounts') {
+      if (selectedEmails && Array.isArray(selectedEmails)) {
+        // Validate that all selected emails exist
+        const emailIds = selectedEmails.map((emailId: string) => new Types.ObjectId(emailId));
+        const emails = await Emails.find({ _id: { $in: emailIds } });
+        
+        if (emails.length !== selectedEmails.length) {
+          return res.status(400).json({ message: 'Some selected emails do not exist' });
+        }
+        
+        product.selectedEmails = selectedEmails;
+      }
+    } else {
+      // Clear selected emails for non-accounts products
+      product.selectedEmails = undefined;
+    }
+
+    await product.save();
+
     return res.status(200).json({
       message: 'Product updated successfully',
       product
