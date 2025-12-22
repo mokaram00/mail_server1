@@ -31,13 +31,7 @@ const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
         return;
       }
 
-      // Log for debugging
-      console.log(`Verifying ${requiredType} token:`, token);
-      
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key') as any;
-      
-      // Log decoded token for debugging
-      console.log('Decoded token:', decoded);
 
       switch (requiredType) {
         case 'admin': {
