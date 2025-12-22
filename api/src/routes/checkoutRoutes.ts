@@ -4,8 +4,8 @@ import auth from '../middleware/auth';
 
 const router = express.Router();
 
-// Create checkout (requires authentication)
-router.post('/', auth, createCheckout);
+// Create checkout (requires user authentication)
+router.post('/', auth('user'), createCheckout);
 
 // SellAuth webhook (no authentication required)
 router.post('/webhook/sellauth', sellAuthWebhook);

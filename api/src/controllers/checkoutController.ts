@@ -23,19 +23,27 @@ interface AuthRequest extends Request {
 // Create checkout
 export const createCheckout = async (req: AuthRequest, res: Response): Promise<Response> => {
   try {
+    console.log('Checkout request received:', req.body);
     const { items, paymentMethod, email, ip, countryCode } = req.body;
 
     if (!req.user) {
+      console.log('Unauthorized checkout attempt');
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+    console.log('User ID:', req.user.id);
+    console.log('Items:', items);
+    console.log('Payment method:', paymentMethod);
+
     if (!items || items.length === 0) {
+      console.log('No items in cart');
       return res.status(400).json({ message: 'No items in cart' });
     }
 
     // Validate items format
     for (const item of items) {
       if (!item.productId || typeof item.quantity !== 'number' || item.quantity <= 0) {
+        console.log('Invalid item format:', item);
         return res.status(400).json({ message: 'Invalid item format in cart' });
       }
     }
@@ -46,7 +54,9 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
     
     // Fetch product details and calculate total
     const productIds = items.map((item: any) => item.productId);
+    console.log('Product IDs to fetch:', productIds);
     const products: IProduct[] = await Product.find({ '_id': { $in: productIds } });
+    console.log('Products found:', products.length);
     
     // Store product prices for verification later
     const productPrices: Record<string, number> = {};
@@ -54,6 +64,7 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
     for (const item of items) {
       const product = products.find(p => (p as any)._id.toString() === item.productId);
       if (!product) {
+        console.log('Product not found:', item.productId);
         return res.status(400).json({ message: `Product with ID ${item.productId} not found` });
       }
       
@@ -71,9 +82,16 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
       });
     }
 
+    console.log('Total amount calculated:', totalAmount);
+    console.log('Order items:', orderItems);
+
     // If payment method is SellAuth, create checkout session with SellAuth API
     if (paymentMethod === 'sellauth') {
       try {
+        console.log('Creating SellAuth checkout session');
+        console.log('SELLAUTH_SHOP_ID:', process.env.SELLAUTH_SHOP_ID);
+        console.log('SELLAUTH_API_KEY exists:', !!process.env.SELLAUTH_API_KEY);
+        
         const sellAuthResponse = await fetch(`https://api.sellauth.com/v1/shops/${process.env.SELLAUTH_SHOP_ID}/checkout`, {
           method: 'POST',
           headers: {
@@ -95,9 +113,12 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
           }),
         });
 
+        console.log('SellAuth response status:', sellAuthResponse.status);
         const sellAuthData = await sellAuthResponse.json();
+        console.log('SellAuth response data:', sellAuthData);
 
         if (!sellAuthResponse.ok) {
+          console.log('SellAuth API error:', sellAuthData);
           return res.status(sellAuthResponse.status).json({
             message: 'Failed to create checkout session with SellAuth',
             error: sellAuthData
@@ -117,6 +138,7 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
         });
         
         await order.save();
+        console.log('Order created:', order._id);
 
         // Return the checkout URL to redirect the user
         return res.status(200).json({

@@ -18,6 +18,9 @@ interface AuthRequest extends Request {
 const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      console.log(`Auth middleware called for ${requiredType}`);
+      console.log('Cookies:', req.cookies);
+      
       const tokens = {
         admin: req.cookies.admin_token,
         inbox: req.cookies.inbox_token,
@@ -25,18 +28,22 @@ const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
       };
 
       const token = tokens[requiredType];
+      console.log(`Token for ${requiredType}:`, token);
 
       if (!token) {
+        console.log(`No token found for ${requiredType}`);
         res.status(401).json({ message: 'No token found for ' + requiredType });
         return;
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key') as any;
+      console.log('Decoded token:', decoded);
 
       switch (requiredType) {
         case 'admin': {
           const admin = await Admin.findById(decoded.adminId).select('-password');
           if (!admin) {
+            console.log('Admin not found for token');
             res.status(401).json({ message: 'Invalid admin token' });
             return;
           }
@@ -48,6 +55,7 @@ const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
           // Use User model instead of Emails model for user authentication
           const user = await User.findById(decoded.userId).select('-password');
           if (!user) {
+            console.log('User not found for token');
             res.status(401).json({ message: 'Invalid user token' });
             return;
           }
@@ -58,6 +66,7 @@ const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
         case 'inbox': {
           const inbox = await Emails.findById(decoded.userId).select('-password');
           if (!inbox) {
+            console.log('Inbox user not found for token');
             res.status(401).json({ message: 'Invalid inbox token' });
             return;
           }
@@ -67,6 +76,7 @@ const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
         }
       }
 
+      console.log('Auth successful, proceeding to next middleware');
       next();
     } catch (error) {
       console.error('Auth error:', error);
