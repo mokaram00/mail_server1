@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { userConnection } from '../config/mongoDb'; // Use user connection
 
 export interface IOrderItem {
   product: mongoose.Types.ObjectId;
@@ -85,4 +86,4 @@ OrderSchema.index({ status: 1 });
 OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
 
-export default mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
+export default userConnection.models.Order || userConnection.model<IOrder>('Order', OrderSchema);

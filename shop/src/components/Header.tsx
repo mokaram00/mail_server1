@@ -3,7 +3,7 @@
 import { useCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, isAuthenticated, signOut } from '@/lib/auth-utils';
+import apiClient, { clearCsrfToken } from '@/lib/apiClient';
 import SubdomainLink from '../components/SubdomainLink'
 
 export default function Header() {
@@ -14,16 +14,26 @@ export default function Header() {
   const [isAuth, setIsAuth] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isCartAnimating, setIsCartAnimating] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const authenticated = isAuthenticated();
-      setIsAuth(authenticated);
-
-      if (authenticated) {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
+      try {
+        setIsProfileLoading(true);
+        const response = await apiClient.getProfile();
+        if (response.user) {
+          setIsAuth(true);
+          setUser(response.user);
+        } else {
+          setIsAuth(false);
+          setUser(null);
+        }
+      } catch (error) {
+        setIsAuth(false);
+        setUser(null);
+      } finally {
+        setIsProfileLoading(false);
       }
     };
 
@@ -99,23 +109,18 @@ export default function Header() {
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await apiClient.logout();
       setIsAuth(false);
       setUser(null);
       setIsUserMenuOpen(false);
-      // Use client-side navigation instead of page reload
       router.push('/');
       router.refresh();
     } catch (error) {
       console.error('Error logging out:', error);
-      // Fallback to manual cleanup
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
+      clearCsrfToken();
       setIsAuth(false);
       setUser(null);
       setIsUserMenuOpen(false);
-      // Use client-side navigation even on error
       router.push('/');
       router.refresh();
     }
@@ -146,10 +151,8 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-1">
             {[
-              { name: 'Home', href: '/', delay: 'nav-item-1' },
-              { name: 'Products', href: '/products', delay: 'nav-item-2' },
-              { name: 'Collections', href: '/collections', delay: 'nav-item-3' },
-              { name: 'About', href: '/about', delay: 'nav-item-4' },
+              { name: 'Home', href: 'https://bltnm.store', delay: 'nav-item-1' },
+              { name: 'Products', href: 'https://shop.bltnm.store', delay: 'nav-item-2' },
             ].map((item) => (
               <SubdomainLink 
                 key={item.name}
@@ -184,7 +187,17 @@ export default function Header() {
             </SubdomainLink>
 
             {/* User Actions */}
-            {!isAuth ? (
+            {isProfileLoading ? (
+              // Show smoother loading animation while profile is being fetched
+              <div className="flex items-center space-x-3">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animation: 'bounce 1.5s infinite', animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animation: 'bounce 1.5s infinite', animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animation: 'bounce 1.5s infinite', animationDelay: '0.4s' }}></div>
+                </div>
+                <span className="text-white text-sm hidden lg:inline opacity-75">Authenticating...</span>
+              </div>
+            ) : !isAuth ? (
               <div className="hidden md:flex items-center space-x-3">
                 <SubdomainLink 
                   href="/login" 
@@ -231,7 +244,7 @@ export default function Header() {
                       <p className="text-gray-400 text-sm truncate">{user?.email}</p>
                     </div>
                     <div className="py-1">
-                      <SubdomainLink href="/profile" className="block px-4 py-3 text-white hover:bg-white/10 text-sm transition-all duration-200 interactive-element">
+                      <SubdomainLink href="/dashboard" className="block px-4 py-3 text-white hover:bg-white/10 text-sm transition-all duration-200 interactive-element">
                         <div className="flex items-center space-x-3">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -239,7 +252,7 @@ export default function Header() {
                           <span>Profile</span>
                         </div>
                       </SubdomainLink>
-                      <SubdomainLink href="/orders" className="block px-4 py-3 text-white hover:bg-white/10 text-sm transition-all duration-200 interactive-element">
+                      <SubdomainLink href="/shop/orders" className="block px-4 py-3 text-white hover:bg-white/10 text-sm transition-all duration-200 interactive-element">
                         <div className="flex items-center space-x-3">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -293,10 +306,8 @@ export default function Header() {
             <div className="lg:hidden absolute top-full left-0 right-0 bg-black/95 backdrop-blur-xl border-b border-white/10 shadow-xl animate-fadeInSlideDown">
               <nav className="px-4 py-6 space-y-1">
                 {[
-                  { name: 'Home', href: '/' },
-                  { name: 'Products', href: '/products' },
-                  { name: 'Collections', href: '/collections' },
-                  { name: 'About', href: '/about' },
+                  { name: 'Home', href: 'https://bltnm.store' },
+                  { name: 'Products', href: 'https://shop.bltnm.store' }
                 ].map((item, index) => (
                   <SubdomainLink 
                     key={item.name}
@@ -308,7 +319,17 @@ export default function Header() {
                 ))}
                 
                 <div className="pt-4 border-t border-white/10">
-                  {!isAuth ? (
+                  {isProfileLoading ? (
+                    // Show smoother loading animation in mobile menu while profile is being fetched
+                    <div className="flex items-center justify-center py-4 space-x-2">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animation: 'bounce 1.5s infinite', animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animation: 'bounce 1.5s infinite', animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animation: 'bounce 1.5s infinite', animationDelay: '0.4s' }}></div>
+                      </div>
+                      <span className="text-white opacity-75">Authenticating...</span>
+                    </div>
+                  ) : !isAuth ? (
                     <div className="space-y-3">
                       <SubdomainLink 
                         href="/login" 
@@ -368,6 +389,20 @@ export default function Header() {
           </>
         )}
       </div>
+      
+      {/* Add custom animation styles for smoother animations */}
+      <style jsx>{`
+        @keyframes bounce {
+          0%, 100% {
+            transform: translateY(0);
+            animationTimingFunction: cubic-bezier(0.8, 0, 1, 1);
+          }
+          50% {
+            transform: translateY(-5px);
+            animationTimingFunction: cubic-bezier(0, 0, 0.2, 1);
+          }
+        }
+      `}</style>
     </header>
   );
 }

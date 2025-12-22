@@ -12,8 +12,8 @@ export const shouldUseFullUrl = (pathname: string, currentHost: string): boolean
   }
   
   // Navigation to dashboard from any other domain requires full URL
-  if ((currentHost == 'shop.bltnm.store' || currentHost == 'bltnm.store' || currentHost == 'www.bltnm.store') &&
-      (pathname.startsWith('/dashboard') || pathname.startsWith('/login') || pathname.startsWith('/register') )) {
+  if ((currentHost !== 'dashboard.bltnm.store') &&
+      (pathname.startsWith('/dashboard') || pathname.startsWith('/login') || pathname.startsWith('/register'))) {
     return true;
   }
   
@@ -25,15 +25,18 @@ export const getProperUrl = (pathname: string, currentHost: string): string => {
   // For cross-subdomain navigation, return full URL
   if (shouldUseFullUrl(pathname, currentHost)) {
     // From main domain to shop
-    if ((currentHost == 'shop.bltnm.store' || currentHost == 'bltnm.store' || currentHost == 'www.bltnm.store') &&
+    if ((currentHost === 'bltnm.store' || currentHost === 'www.bltnm.store') &&
         (pathname.startsWith('/products') || pathname.startsWith('/cart') || pathname.startsWith('/checkout'))) {
       return `https://shop.bltnm.store${pathname}`;
     }
     
-    // To dashboard
-    if ((currentHost == 'shop.bltnm.store' || currentHost == 'bltnm.store' || currentHost == 'www.bltnm.store') &&
-        pathname.startsWith('/dashboard') || pathname.startsWith('/login') || pathname.startsWith('/register') ) {
+    // To dashboard/login/register
+    if (pathname.startsWith('/dashboard')) {
       return `https://dashboard.bltnm.store${pathname.replace('/dashboard', '') || '/'}`;
+    }
+    
+    if (pathname.startsWith('/login') || pathname.startsWith('/register')) {
+      return `https://dashboard.bltnm.store${pathname}`;
     }
   }
   

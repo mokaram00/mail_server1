@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import Emails from '../models/Emails';
 import Admin from '../models/Admin';
+import { User } from '../models/User'; // Import User model
 
 // Extend the Request type to include user and admin properties
 interface AuthRequest extends Request {
@@ -30,7 +31,13 @@ const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
         return;
       }
 
+      // Log for debugging
+      console.log(`Verifying ${requiredType} token:`, token);
+      
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key') as any;
+      
+      // Log decoded token for debugging
+      console.log('Decoded token:', decoded);
 
       switch (requiredType) {
         case 'admin': {
@@ -44,7 +51,8 @@ const auth = (requiredType: 'admin' | 'inbox' | 'user') => {
           break;
         }
         case 'user': {
-          const user = await Emails.findById(decoded.userId).select('-password');
+          // Use User model instead of Emails model for user authentication
+          const user = await User.findById(decoded.userId).select('-password');
           if (!user) {
             res.status(401).json({ message: 'Invalid user token' });
             return;

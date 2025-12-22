@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { isAuthenticated, getCurrentUser } from '@/lib/auth-utils';
+import apiClient from '@/lib/apiClient';
 
 export default function Loading() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -12,10 +12,7 @@ export default function Loading() {
     const initializeApp = async () => {
       try {
         // Check if user is authenticated
-        const authenticated = isAuthenticated();
-        if (authenticated) {
-          await getCurrentUser(); // This will set the user in localStorage
-        }
+        await apiClient.getProfile(); // This will verify auth status
       } catch (error) {
         console.error('Error initializing app:', error);
       } finally {

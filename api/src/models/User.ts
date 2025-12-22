@@ -5,11 +5,11 @@ import { userConnection } from '../config/mongoDb'; // Use user connection
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   email: string;
-  fullName?: string;
-
+  fullName: string; // Make this required as it's the main field we use
+  
   // Legacy fields for backward compatibility (optional for Supabase users)
   name?: string;
-  password?: string;
+  password: string; // Make this required as all users need a password
   
   // Account status
   isActive: boolean;
@@ -40,8 +40,6 @@ const UserSchema = new Schema<IUser>({
   fullName: {
     type: String,
     required: true,
-    unique: true,
-    lowercase: true,
     trim: true
   },
 
@@ -53,6 +51,7 @@ const UserSchema = new Schema<IUser>({
 
   password: {
     type: String,
+    required: true, // Make this required
   },
   // Account status
   isActive: {
@@ -90,12 +89,17 @@ UserSchema.virtual('profile').get(function () {
   return {
     id: this._id,
     email: this.email,
-    fullName: this.fullName || this.name,
+    fullName: this.fullName || this.name || '', // Ensure we always have a value
     avatar: this.avatar,
     isActive: this.isActive,
     lastLogin: this.lastLogin,
     createdAt: this.createdAt
   };
+});
+
+// Ensure the virtual fields are serialized
+UserSchema.set('toJSON', {
+  virtuals: true
 });
 
 // Static method to find user by Supabase ID
@@ -113,12 +117,6 @@ UserSchema.methods.updateLastLogin = function () {
   this.lastLogin = new Date();
   return this.save();
 };
-
-// Pre-save middleware to update updatedAt
-UserSchema.pre('save', function () {
-  this.updatedAt = new Date();
-  return this.save();
-});
 
 // Create and export the User model using user connection
 const User: Model<IUser> = userConnection.model<IUser>('User', UserSchema);

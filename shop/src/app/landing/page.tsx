@@ -41,25 +41,25 @@ export default function Home() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-8 justify-center items-center animate-fadeInSlideUp delay-300">
-              <Link
-                href="/products"
+              <a
+                href="https://shop.bltnm.store/products"
                 className="btn-ripple btn-hover-scale group relative bg-white text-black px-10 py-5 rounded-full text-xl font-semibold shadow-2xl transform hover:scale-105 hover:shadow-3xl transition-all duration-300 border border-white"
               >
                 <span className="flex items-center gap-3">
                   <FaShoppingBag className="w-6 h-6 transform group-hover:rotate-12 transition-all duration-300" />
                   Browse Products
                 </span>
-              </Link>
+              </a>
 
-              <Link
-                href="/contact"
+              <a
+                href="https://bltnm.store/contact"
                 className="btn-ripple btn-hover-scale group relative bg-transparent border-2 border-white text-white px-10 py-5 rounded-full text-xl font-semibold shadow-xl transform hover:scale-105 hover:shadow-2xl transition-all duration-300"
               >
                 <span className="flex items-center gap-3">
                   <FaPhone className="w-6 h-6 transform group-hover:rotate-12 transition-all duration-300" />
                   Get in Touch
                 </span>
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -144,25 +144,25 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-8 justify-center animate-fadeInSlideUp delay-200">
-            <Link
-              href="/products"
+            <a
+              href="https://shop.bltnm.store/"
               className="btn-ripple btn-hover-scale group relative bg-white text-black px-10 py-5 rounded-full text-xl font-semibold shadow-2xl transform hover:scale-105 hover:shadow-3xl transition-all duration-300"
             >
               <span className="flex items-center gap-3">
                 <FaShoppingCart className="w-6 h-6 transform group-hover:rotate-12 transition-all duration-300" />
                 Shop Now
               </span>
-            </Link>
+            </a>
 
-            <Link
-              href="/contact"
+            <a
+              href="https://bltnm.store/contact"
               className="btn-ripple btn-hover-scale group relative bg-transparent border-2 border-white text-white px-10 py-5 rounded-full text-xl font-semibold shadow-xl transform hover:scale-105 hover:shadow-2xl transition-all duration-300"
             >
               <span className="flex items-center gap-3">
                 <FaComments className="w-6 h-6 transform group-hover:rotate-12 transition-all duration-300" />
                 Contact Us
               </span>
-            </Link>
+            </a>
           </div>
         </div>
       </section>

@@ -96,27 +96,65 @@ const CartContext = createContext<{
   clearCart: () => void;
 } | null>(null);
 
+// Cross-subdomain localStorage functions
+const CART_STORAGE_KEY = 'bltnm_cart';
+
+const getCrossDomainCart = (): CartState => {
+  try {
+    // Try to get from current domain first
+    const localCart = localStorage.getItem(CART_STORAGE_KEY);
+    if (localCart) {
+      return JSON.parse(localCart);
+    }
+    
+    // Try to get from cookie as fallback (for cross-domain access)
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === CART_STORAGE_KEY) {
+        return JSON.parse(decodeURIComponent(value));
+      }
+    }
+    
+    return initialState;
+  } catch (error) {
+    console.error('Error loading cart from storage:', error);
+    return initialState;
+  }
+};
+
+const saveCrossDomainCart = (cartState: CartState) => {
+  try {
+    // Save to localStorage
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartState));
+    
+    // Also save to cookie for cross-domain access (expires in 30 days)
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + 30);
+    document.cookie = `${CART_STORAGE_KEY}=${encodeURIComponent(JSON.stringify(cartState))}; expires=${expirationDate.toUTCString()}; path=/; domain=.bltnm.store; SameSite=None; Secure`;
+  } catch (error) {
+    console.error('Error saving cart to storage:', error);
+  }
+};
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
 
-  // حفظ السلة في localStorage
+  // Load cart from cross-domain storage
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        const parsedCart = JSON.parse(savedCart);
-        parsedCart.items.forEach((item: CartItem) => {
-          dispatch({ type: 'ADD_ITEM', payload: item });
-        });
-      } catch (error) {
-        console.error('خطأ في تحميل السلة من localStorage:', error);
-      }
+    const savedCart = getCrossDomainCart();
+    if (savedCart && savedCart.items.length > 0) {
+      savedCart.items.forEach((item: CartItem) => {
+        dispatch({ type: 'ADD_ITEM', payload: item });
+      });
     }
   }, []);
 
-  // حفظ السلة في localStorage عند التغيير
+  // Save cart to cross-domain storage when it changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(state));
+    if (state.items.length > 0 || initialState !== state) {
+      saveCrossDomainCart(state);
+    }
   }, [state]);
 
   const addItem = (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
@@ -165,7 +203,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 export function useCart() {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('يجب استخدام useCart داخل CartProvider');
+    throw new Error('useCart must be used within a CartProvider');
   }
   return context;
 }

@@ -1,46 +1,46 @@
+'use client';
+
 import Link from 'next/link';
+import SubdomainLink from '@/components/SubdomainLink';
+import { FaTimesCircle, FaArrowLeft, FaShoppingCart } from 'react-icons/fa';
 
 export default function CheckoutCancelledPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="max-w-md mx-auto px-4 text-center">
-        <div className="text-red-400 text-6xl mb-6">❌</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          تم إلغاء الدفع
-        </h1>
-        <p className="text-lg text-gray-600 mb-8">
-          لم يتم إتمام عملية الدفع. يمكنك المحاولة مرة أخرى أو الرجوع للتسوق.
-        </p>
-
-        <div className="space-y-4">
-          <div className="bg-yellow-50 rounded-lg p-4">
-            <p className="text-sm text-yellow-800 text-right">
-              إذا واجهت أي مشكلة في عملية الدفع، يرجى المحاولة مرة أخرى أو التواصل معنا للحصول على المساعدة.
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="max-w-md w-full">
+        <div className="bg-card rounded-3xl shadow-xl p-8 text-center border border-foreground/10 relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-full blur-2xl"></div>
+          
+          <div className="relative z-10">
+            <div className="w-20 h-20 bg-gradient-to-br from-red-500/20 to-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FaTimesCircle className="text-red-500 text-3xl" />
+            </div>
+            
+            <h1 className="text-2xl font-bold text-foreground mb-4">
+              تم إلغاء الدفع
+            </h1>
+            
+            <p className="text-foreground/70 mb-8 leading-relaxed">
+              لقد تم إلغاء عملية الدفع بنجاح. يمكنك العودة إلى سلة التسوق لإكمال عملية الشراء لاحقاً.
             </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link
-              href="/cart"
-              className="flex-1 inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors text-center"
-            >
-              العودة لسلة التسوق
-            </Link>
-            <Link
-              href="/products"
-              className="flex-1 inline-block bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors text-center"
-            >
-              متابعة التسوق
-            </Link>
-          </div>
-
-          <div className="pt-4 border-t border-gray-200">
-            <p className="text-sm text-gray-600">
-              هل تحتاج مساعدة؟{' '}
-              <Link href="/contact" className="text-blue-600 hover:text-blue-800 font-medium">
-                تواصل معنا
-              </Link>
-            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4">
+              <SubdomainLink
+                href="/cart"
+                className="flex-1 inline-flex items-center justify-center bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-6 py-4 rounded-2xl font-bold shadow-lg hover:from-primary/90 hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
+              >
+                <FaShoppingCart className="mr-3" />
+                العودة لسلة التسوق
+              </SubdomainLink>
+              <SubdomainLink
+                href="/products"
+                className="flex-1 inline-flex items-center justify-center bg-gradient-to-r from-foreground to-foreground/80 text-foreground-contrast px-6 py-4 rounded-2xl font-bold shadow-lg hover:from-foreground/90 hover:to-foreground focus:outline-none focus:ring-2 focus:ring-foreground focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
+              >
+                <FaArrowLeft className="mr-3" />
+                متابعة التسوق
+              </SubdomainLink>
+            </div>
           </div>
         </div>
       </div>

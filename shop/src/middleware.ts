@@ -4,6 +4,19 @@ export function middleware(req: NextRequest) {
   const host = req.headers.get("host") || "";
   const url = req.nextUrl.clone();
 
+  // Handle redirection from cart and product pages to shop.bltnm.store
+  if (host !== "shop.bltnm.store") {
+    // Redirect cart page
+    if (url.pathname === "/cart" || url.pathname.startsWith("/cart/")) {
+      return NextResponse.redirect(`https://shop.bltnm.store${url.pathname}${url.search}`);
+    }
+    
+    // Redirect product detail pages
+    if (url.pathname.startsWith("/products/")) {
+      return NextResponse.redirect(`https://shop.bltnm.store${url.pathname}${url.search}`);
+    }
+  }
+
   // bltnm.store → landing
   if (host === "bltnm.store" || host === "www.bltnm.store") {
     // Allow API routes, static assets, and favicon to pass through

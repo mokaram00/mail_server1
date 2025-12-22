@@ -49,10 +49,9 @@ export const register = async (req: Request, res: Response): Promise<Response> =
 
     // Set user token in cookie with proper domain
     res.cookie('user_token', token, {
-      domain: 'bltnm.store',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
@@ -113,10 +112,9 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 
     // Set user token in cookie with proper domain
     res.cookie('user_token', token, {
-      domain: 'bltnm.store',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
@@ -125,7 +123,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     const userData = {
       id: user._id,
       email: user.email,
-      fullName: user.fullName,
+      fullName: user.fullName// Use fullName if available, fallback to name
     };
 
     return res.status(200).json({
@@ -150,8 +148,20 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<Respo
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Ensure the response includes the correct fullName field
+    const userData = {
+      _id: user._id,
+      email: user.email,
+      fullName: user.fullName, // Use fullName if available, fallback to name
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
+
     return res.status(200).json({
-      user,
+      user: userData,
     });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -162,10 +172,7 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<Respo
 export const logout = async (req: Request, res: Response): Promise<Response> => {
   try {
     // Clear the user token cookie
-    res.clearCookie('user_token', {
-      domain: 'bltnm.store',
-      path: '/'
-    });
+    res.clearCookie('user_token');
     
     return res.status(200).json({
       message: 'Logged out successfully'

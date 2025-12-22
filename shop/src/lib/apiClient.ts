@@ -169,6 +169,14 @@ const apiClient = {
     // Clear CSRF token on logout
     clearCsrfToken();
     
+    // Clear user data from localStorage
+    localStorage.removeItem('user');
+    
+    // Redirect to home page after logout
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+    
     return response.json();
   },
   
@@ -325,22 +333,54 @@ const apiClient = {
   },
   
   // Checkout methods
-  createCheckoutSession: async (checkoutData: any): Promise<ApiResponse<any>> => {
-    const response = await fetch(`${API_BASE_URL}/api/checkout/create-checkout-session`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
-      },
-      body: JSON.stringify(checkoutData),
-    });
-    
-    // Extract CSRF token from response if available
-    const responseCsrfToken = response.headers.get('x-csrf-token');
-    if (responseCsrfToken) {
-      setCsrfToken(responseCsrfToken);
+  createCheckoutSession: async (checkoutData: any): Promise<any> => {
+    if (checkoutData.paymentMethod === 'sellauth') {
+      // Use SellAuth API
+      return await apiClient.createSellAuthCheckoutSession(checkoutData);
+    } else {
+      // Use existing API
+      const response = await fetch(`${API_BASE_URL}/api/checkout/create-checkout-session`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+        body: JSON.stringify(checkoutData),
+      });
+      
+      // Extract CSRF token from response if available
+      const responseCsrfToken = response.headers.get('x-csrf-token');
+      if (responseCsrfToken) {
+        setCsrfToken(responseCsrfToken);
+      }
+      
+      return response.json();
     }
+  },
+
+  // Add new method for SellAuth checkout
+  createSellAuthCheckoutSession: async (checkoutData: any): Promise<any> => {
+    const response = await fetch('https://api.sellauth.com/v1/shops/${process.env.NEXT_PUBLIC_SELLAUTH_SHOP_ID}/checkout', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SELLAUTH_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        cart: checkoutData.items.map((item: any) => ({
+          product_id: item.productId,
+          quantity: item.quantity,
+        })),
+        ip: checkoutData.ip || '127.0.0.1',
+        country_code: checkoutData.countryCode || 'US',
+        email: checkoutData.email,
+        payment_gateways: {
+          STRIPE: true,
+          PAYPAL: true,
+        }
+      }),
+    });
     
     return response.json();
   },

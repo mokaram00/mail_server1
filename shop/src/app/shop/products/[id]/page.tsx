@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import SubdomainLink from '@/components/SubdomainLink';
 import Image from 'next/image'
 import { useCart } from '@/lib/cart-context';
 import { FaSearch } from 'react-icons/fa';
@@ -131,12 +131,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           <p className="text-gray-600 text-sm mb-4">
             The product you're looking for doesn't exist or has been removed.
           </p>
-          <Link
+          <SubdomainLink
             href="/products"
             className="inline-block bg-gradient-to-r from-black to-gray-800 text-white px-6 py-2 rounded-xl text-sm font-semibold shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300"
           >
             Browse all products
-          </Link>
+          </SubdomainLink>
         </div>
       </div>
     );
@@ -359,12 +359,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 </svg>
                 <span>You Might Also Like</span>
               </h3>
-              <Link
+              <SubdomainLink
                 href="/products"
                 className="text-sm font-medium text-gray-600 hover:text-black transition-colors duration-300"
               >
                 View All →
-              </Link>
+              </SubdomainLink>
             </div>
 
             {/* Loading state for suggestions */}
@@ -385,7 +385,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               <div className="overflow-x-auto pb-2">
                 <div className="flex space-x-4 rtl:space-x-reverse min-w-max">
                   {(suggestions || []).map((suggestion) => (
-                    <Link
+                    <SubdomainLink
                       key={suggestion._id}
                       href={`/products/${suggestion._id}`}
                       className="group flex-shrink-0 w-48 bg-gray-50 rounded-xl overflow-hidden hover:bg-white hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
@@ -449,7 +449,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                           </span>
                         </div>
                       </div>
-                    </Link>
+                    </SubdomainLink>
                   ))}
                 </div>
               </div>

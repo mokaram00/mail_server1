@@ -1,11 +1,12 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import Link from 'next/link';
+import { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import SubdomainLink from '@/components/SubdomainLink';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cart-context';
-import { useAuth } from '@/lib/auth-context';
-import { FaCheckCircle, FaInbox, FaCreditCard, FaTruck, FaClock, FaEnvelope, FaShoppingBag } from 'react-icons/fa';
+import { FaCheckCircle, FaInbox, FaCreditCard, FaTruck, FaClock, FaEnvelope, FaShoppingBag, FaArrowLeft, FaPrint, FaDownload } from 'react-icons/fa';
+import apiClient from '@/lib/apiClient';
 
 function CheckoutSuccessPage({
   searchParams,
@@ -14,11 +15,30 @@ function CheckoutSuccessPage({
 }) {
   const router = useRouter();
   const { clearCart } = useCart();
-  const { user, loading: authLoading } = useAuth();
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [executed, setExecuted] = useState(false);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await apiClient.getProfile();
+        if (response.user) {
+          setUser(response.user);
+        }
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -73,13 +93,22 @@ function CheckoutSuccessPage({
     }
   };
 
+  const handlePrintReceipt = () => {
+    window.print();
+  };
+
+  const handleDownloadReceipt = () => {
+    // In a real app, this would download a PDF receipt
+    alert('Downloading receipt...');
+  };
+
   // Show loading while checking authentication
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري التحقق من تسجيل الدخول...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-foreground/70">جاري التحقق من تسجيل الدخول...</p>
         </div>
       </div>
     );
@@ -89,10 +118,10 @@ function CheckoutSuccessPage({
   if (!user) {
     router.push('/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري إعادة التوجيه لتسجيل الدخول...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-foreground/70">جاري إعادة التوجيه لتسجيل الدخول...</p>
         </div>
       </div>
     );
@@ -100,11 +129,11 @@ function CheckoutSuccessPage({
 
   if (loading || !isConfirmed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري الانتظار لتأكيد الدفع من الويب هوك...</p>
-          <p className="text-sm text-gray-500 mt-2">قد يستغرق هذا بضع ثوانٍ</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-foreground/70">جاري الانتظار لتأكيد الدفع من الويب هوك...</p>
+          <p className="text-sm text-foreground/50 mt-2">قد يستغرق هذا بضع ثوانٍ</p>
         </div>
       </div>
     );
@@ -112,153 +141,190 @@ function CheckoutSuccessPage({
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-6">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-red-500 text-3xl">❌</span>
+      <div className="min-h-screen bg-background">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="bg-card rounded-3xl shadow-xl border border-foreground/10 p-8 text-center">
+            <div className="text-red-500 text-5xl mb-6">❌</div>
+            <h1 className="text-2xl font-bold text-foreground mb-3">
+              خطأ في الدفع
+            </h1>
+            <p className="text-foreground/70 mb-8 leading-relaxed">
+              لم نتمكن من العثور على بيانات الطلب. يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني.
+            </p>
+            <SubdomainLink
+              href="/products"
+              className="inline-block bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-8 py-4 rounded-2xl font-bold shadow-lg hover:from-primary/90 hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
+            >
+              العودة للتسوق
+            </SubdomainLink>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            خطأ في الدفع
-          </h1>
-          <p className="text-gray-600 mb-8 leading-relaxed">
-            لم نتمكن من العثور على بيانات الطلب. يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني.
-          </p>
-          <Link
-            href="/products"
-            className="inline-block bg-gradient-to-r from-black to-gray-800 text-white px-8 py-4 rounded-2xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-          >
-            العودة للتسوق
-          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      {/* Success Header */}
-      <div className="bg-gradient-to-r from-black to-gray-800 text-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-              <FaCheckCircle className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+        {/* Success Header */}
+        <div className="bg-card rounded-3xl shadow-xl border border-foreground/10 p-8 mb-8 relative overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-green-500/20 to-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
+              <FaCheckCircle className="w-10 h-10 text-green-500" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3">
               تم الدفع بنجاح! 🎉
             </h1>
-            <p className="text-sm text-gray-200">
+            <p className="text-foreground/70 text-lg">
               شكراً لك على طلبك. تم استلام دفعتك وجاري معالجة طلبك.
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 -mt-4">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-card rounded-3xl shadow-xl border border-foreground/10 overflow-hidden">
+          {/* Back to Shopping Button */}
+          <div className="p-6 border-b border-foreground/10">
+            <SubdomainLink
+              href="/products"
+              className="inline-flex items-center text-foreground/70 hover:text-foreground font-medium transition-colors duration-200 text-base"
+            >
+              <FaArrowLeft className="w-4 h-4 ml-2" />
+              العودة للتسوق
+            </SubdomainLink>
+          </div>
 
           {/* Order Details Card */}
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center">
-                <FaInbox className="w-5 h-5 text-black ml-2" />
+          <div className="p-6 border-b border-foreground/10">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-foreground flex items-center">
+                <FaInbox className="w-6 h-6 text-foreground ml-3" />
                 تفاصيل الطلب
               </h2>
-              <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-semibold">
+              <span className="bg-foreground/10 text-foreground px-4 py-2 rounded-full text-base font-semibold">
                 #{order._id?.toString().slice(-8) || 'غير محدد'}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Order Info */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <FaCreditCard className="w-4 h-4 text-gray-500 ml-2" />
-                    <span className="text-sm text-gray-600">المبلغ المدفوع</span>
-                  </div>
-                  <span className="text-lg font-bold bg-gradient-to-r from-black to-gray-800 bg-clip-text text-transparent">
-                    {order.totalAmount?.toFixed(2) || '0.00'} Usd
-                  </span>
-                </div>
+              <div className="space-y-6">
+                <div className="bg-foreground/5 rounded-2xl p-6">
+                  <h3 className="text-xl font-semibold text-foreground mb-5 flex items-center">
+                    <FaCreditCard className="w-6 h-6 text-foreground ml-3" />
+                    معلومات الطلب
+                  </h3>
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between p-5 bg-card rounded-xl shadow-sm border border-foreground/10">
+                      <div className="flex items-center">
+                        <FaCreditCard className="w-6 h-6 text-foreground/50 ml-4" />
+                        <div>
+                          <span className="text-foreground/70">المبلغ المدفوع</span>
+                          <p className="font-bold text-2xl bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mt-1">
+                            {order.totalAmount?.toFixed(2) || '0.00'} Usd
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <FaTruck className="w-4 h-4 text-gray-500 ml-2" />
-                    <span className="text-sm text-gray-600">حالة الطلب</span>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {order.status === 'completed' ? 'مكتمل' :
-                     order.status === 'pending' ? 'قيد المعالجة' :
-                     order.status === 'canceled' ? 'ملغي' : order.status}
-                  </span>
-                </div>
+                    <div className="flex items-center justify-between p-5 bg-card rounded-xl shadow-sm border border-foreground/10">
+                      <div className="flex items-center">
+                        <FaTruck className="w-6 h-6 text-foreground/50 ml-4" />
+                        <div>
+                          <span className="text-foreground/70">حالة الطلب</span>
+                          <span className={`inline-block px-4 py-2 rounded-full text-base font-medium mt-1 ${
+                            order.status === 'completed' ? 'bg-green-500/20 text-green-600 border border-green-500/30' :
+                            order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-600 border border-yellow-500/30' :
+                            'bg-red-500/20 text-red-600 border border-red-500/30'
+                          }`}>
+                            {order.status === 'completed' ? 'مكتمل' :
+                             order.status === 'pending' ? 'قيد المعالجة' :
+                             order.status === 'canceled' ? 'ملغي' : order.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <FaClock className="w-4 h-4 text-gray-500 ml-2" />
-                    <span className="text-sm text-gray-600">طريقة الدفع</span>
-                  </div>
-                  <span className="font-medium text-sm text-gray-900">
-                   {order.paymentMethod === 'polar' ? 'Polar Checkout' :
-                    order.paymentMethod === 'paypal' ? 'باي بال' :
-                    order.paymentMethod === 'stripe' ? 'بطاقة ائتمان' : (order.paymentMethod || 'غير محدد')}
-                 </span>
-                </div>
+                    <div className="flex items-center justify-between p-5 bg-card rounded-xl shadow-sm border border-foreground/10">
+                      <div className="flex items-center">
+                        <FaClock className="w-6 h-6 text-foreground/50 ml-4" />
+                        <div>
+                          <span className="text-foreground/70">طريقة الدفع</span>
+                          <p className="font-medium text-foreground text-base mt-1">
+                           {order.paymentMethod === 'polar' ? 'Polar Checkout' :
+                            order.paymentMethod === 'paypal' ? 'باي بال' :
+                            order.paymentMethod === 'stripe' ? 'بطاقة ائتمان' : (order.paymentMethod || 'غير محدد')}
+                         </p>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <FaEnvelope className="w-4 h-4 text-gray-500 ml-2" />
-                    <span className="text-sm text-gray-600">حالة الدفع</span>
+                    <div className="flex items-center justify-between p-5 bg-card rounded-xl shadow-sm border border-foreground/10">
+                      <div className="flex items-center">
+                        <FaEnvelope className="w-6 h-6 text-foreground/50 ml-4" />
+                        <div>
+                          <span className="text-foreground/70">حالة الدفع</span>
+                          <span className={`inline-block px-4 py-2 rounded-full text-base font-medium mt-1 ${
+                            order.paymentStatus === 'paid' ? 'bg-green-500/20 text-green-600 border border-green-500/30' :
+                            order.paymentStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-600 border border-yellow-500/30' :
+                            'bg-red-500/20 text-red-600 border border-red-500/30'
+                          }`}>
+                            {order.paymentStatus === 'paid' ? 'مدفوع' :
+                             order.paymentStatus === 'pending' ? 'قيد الانتظار' :
+                             order.paymentStatus === 'failed' ? 'فاشل' : order.paymentStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
-                    order.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {order.paymentStatus === 'paid' ? 'مدفوع' :
-                     order.paymentStatus === 'pending' ? 'قيد الانتظار' :
-                     order.paymentStatus === 'failed' ? 'فاشل' : order.paymentStatus}
-                  </span>
                 </div>
               </div>
 
               {/* Order Items */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                  <FaShoppingBag className="w-4 h-4 text-gray-500 ml-1" />
-                  المنتجات ({order.items?.length || 0})
-                </h3>
-                <div className="space-y-2">
-                  {order.items?.map((item: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-gray-900">
-                          منتج #{item.product?.toString().slice(-6) || 'غير محدد'}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          الكمية: {item.quantity || 0} × {(item.price || 0).toFixed(2)} USD
-                        </p>
-                      </div>
-                      <span className="font-semibold bg-gradient-to-r from-black to-gray-800 bg-clip-text text-transparent text-sm">
-                        {((item.price || 0) * (item.quantity || 0)).toFixed(2)} USD
-                      </span>
-                    </div>
-                  ))}
-                </div>
+              <div className="space-y-6">
+                <div className="bg-foreground/5 rounded-2xl p-6">
+                  <h3 className="text-xl font-semibold text-foreground mb-5 flex items-center">
+                    <FaShoppingBag className="w-6 h-6 text-foreground/50 ml-3" />
+                    المنتجات ({order.items?.length || 0})
+                  </h3>
 
-                {/* Order Summary */}
-                <div className="border-t pt-3 space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-600">المجموع الفرعي:</span>
-                    <span className="font-medium">{order.totalAmount?.toFixed(2) || '0.00'} USD</span>
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {order.items?.map((item: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-5 bg-card rounded-xl shadow-sm border border-foreground/10 hover:shadow-md transition-shadow duration-200">
+                        <div className="flex items-center space-x-4 rtl:space-x-reverse">
+                          <div className="w-14 h-14 bg-gradient-to-br from-foreground/10 to-foreground/20 rounded-lg flex items-center justify-center">
+                            <FaInbox className="w-6 h-6 text-foreground/50" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">
+                              منتج #{item.product?.toString().slice(-6) || 'غير محدد'}
+                            </p>
+                            <p className="text-sm text-foreground/70">
+                              الكمية: {item.quantity || 0} × {(item.price || 0).toFixed(2)} USD
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                            {((item.price || 0) * (item.quantity || 0)).toFixed(2)} USD
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between text-sm font-bold border-t pt-2">
-                    <span className="text-gray-900">الإجمالي:</span>
-                    <span className="bg-gradient-to-r from-black to-gray-800 bg-clip-text text-transparent">{order.totalAmount?.toFixed(2) || '0.00'} USD</span>
+
+                  {/* Order Summary */}
+                  <div className="border-t border-foreground/10 pt-5 mt-6 space-y-3 bg-foreground/5 p-5 rounded-xl">
+                    <div className="flex justify-between text-base">
+                      <span className="text-foreground/70">المجموع الفرعي:</span>
+                      <span className="font-medium">{order.totalAmount?.toFixed(2) || '0.00'} USD</span>
+                    </div>
+                    <div className="flex justify-between text-2xl font-bold border-t border-foreground/10 pt-4">
+                      <span className="text-foreground">الإجمالي:</span>
+                      <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">{order.totalAmount?.toFixed(2) || '0.00'} USD</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -266,75 +332,84 @@ function CheckoutSuccessPage({
           </div>
 
           {/* Next Steps */}
-          <div className="p-4 bg-gray-50">
-            <h3 className="text-sm font-bold text-gray-900 mb-3 text-center">
+          <div className="p-6 bg-foreground/5 border-b border-foreground/10">
+            <h3 className="text-2xl font-bold text-foreground mb-6 text-center">
               الخطوات التالية 📋
             </h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-start space-x-2 rtl:space-x-reverse">
-                <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-gray-700 font-bold text-xs">1</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+              <div className="flex flex-col items-center text-center p-5 bg-card rounded-xl shadow-sm border border-foreground/10 hover:shadow-md transition-shadow duration-200">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-3">
+                  <span className="text-blue-500 font-bold text-lg">1</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1 text-xs">تأكيد الطلب</h4>
-                  <p className="text-xs text-gray-600">مراجعة خلال 24 ساعة</p>
-                </div>
+                <h4 className="font-semibold text-foreground mb-2 text-base">تأكيد الطلب</h4>
+                <p className="text-sm text-foreground/70">مراجعة خلال 24 ساعة</p>
               </div>
 
-              <div className="flex items-start space-x-2 rtl:space-x-reverse">
-                <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-gray-700 font-bold text-xs">2</span>
+              <div className="flex flex-col items-center text-center p-5 bg-card rounded-xl shadow-sm border border-foreground/10 hover:shadow-md transition-shadow duration-200">
+                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-3">
+                  <span className="text-green-500 font-bold text-lg">2</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1 text-xs">رسالة التأكيد</h4>
-                  <p className="text-xs text-gray-600">ستصل على البريد الإلكتروني</p>
-                </div>
+                <h4 className="font-semibold text-foreground mb-2 text-base">رسالة التأكيد</h4>
+                <p className="text-sm text-foreground/70">ستصل على البريد الإلكتروني</p>
               </div>
 
-              <div className="flex items-start space-x-2 rtl:space-x-reverse">
-                <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-gray-700 font-bold text-xs">3</span>
+              <div className="flex flex-col items-center text-center p-5 bg-card rounded-xl shadow-sm border border-foreground/10 hover:shadow-md transition-shadow duration-200">
+                <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mb-3">
+                  <span className="text-purple-500 font-bold text-lg">3</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1 text-xs">الشحن</h4>
-                  <p className="text-xs text-gray-600">خلال 2-3 أيام عمل</p>
-                </div>
+                <h4 className="font-semibold text-foreground mb-2 text-base">الشحن</h4>
+                <p className="text-sm text-foreground/70">خلال 2-3 أيام عمل</p>
               </div>
 
-              <div className="flex items-start space-x-2 rtl:space-x-reverse">
-                <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-gray-700 font-bold text-xs">4</span>
+              <div className="flex flex-col items-center text-center p-5 bg-card rounded-xl shadow-sm border border-foreground/10 hover:shadow-md transition-shadow duration-200">
+                <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mb-3">
+                  <span className="text-yellow-500 font-bold text-lg">4</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1 text-xs">التتبع</h4>
-                  <p className="text-xs text-gray-600">متابعة حالة الطلب</p>
-                </div>
+                <h4 className="font-semibold text-foreground mb-2 text-base">التتبع</h4>
+                <p className="text-sm text-foreground/70">متابعة حالة الطلب</p>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="p-4 bg-gray-50">
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
+          <div className="p-8">
+            <div className="flex flex-col sm:flex-row gap-5 justify-center mb-8">
+              <SubdomainLink
                 href="/products"
-                className="inline-block bg-gradient-to-r from-black to-gray-800 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center text-sm"
+                className="flex-1 inline-flex items-center justify-center bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-6 py-4 rounded-2xl font-bold shadow-lg hover:from-primary/90 hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
               >
                 متابعة التسوق 🛒
-              </Link>
+              </SubdomainLink>
               <button
                 onClick={handleViewOrder}
-                className="inline-block bg-gradient-to-r from-gray-600 to-gray-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center text-sm"
+                className="flex-1 inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-2xl font-bold shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
               >
                 عرض التفاصيل 📋
               </button>
             </div>
 
-            <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500 mb-1">
+            <div className="flex flex-col sm:flex-row gap-5 justify-center">
+              <button
+                onClick={handlePrintReceipt}
+                className="flex-1 inline-flex items-center justify-center bg-gradient-to-r from-foreground to-foreground/80 text-foreground-contrast px-6 py-4 rounded-2xl font-bold shadow-lg hover:from-foreground/90 hover:to-foreground focus:outline-none focus:ring-2 focus:ring-foreground focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
+              >
+                <FaPrint className="mr-3" />
+                طباعة الإيصال 🖨️
+              </button>
+              <button
+                onClick={handleDownloadReceipt}
+                className="flex-1 inline-flex items-center justify-center bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-4 rounded-2xl font-bold shadow-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
+              >
+                <FaDownload className="mr-3" />
+                تنزيل الإيصال 💾
+              </button>
+            </div>
+
+            <div className="mt-8 text-center">
+              <p className="text-base text-foreground/70 mb-2">
                 مرحباً {user?.name || user?.email}، تم ربط الطلب بحسابك
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-sm text-foreground/50">
                 تم مسح السلة تلقائياً بعد إتمام الدفع
               </p>
             </div>

@@ -61,7 +61,8 @@ const allowedOrigins = [
   'https://inbox.bltnm.store',
   'https://inbox.bltnm.store/inbox',
   'https://bltnm.store',
-  'https://shop.bltnm.store'
+  'https://shop.bltnm.store',
+  'https://dashboard.bltnm.store'
 ];
 
 // إعدادات CORS
