@@ -14,7 +14,7 @@ interface AdminAuthRequest extends Request {
 export const createCoupon = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     // Check if user is admin
-    if (!req.admin || req.admin.role !== 'admin') {
+    if (!req.admin || req.admin.role !== 'superadmin') {
       return res.status(403).json({ message: 'Access denied. Admin rights required.' });
     }
 
@@ -74,7 +74,7 @@ export const createCoupon = async (req: AdminAuthRequest, res: Response): Promis
 export const getCoupons = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     // Check if user is admin
-    if (!req.admin || req.admin.role !== 'admin') {
+    if (!req.admin || req.admin.role !== 'superadmin') {
       return res.status(403).json({ message: 'Access denied. Admin rights required.' });
     }
     const { page = '1', limit = '10', search = '', active } = req.query;
@@ -125,7 +125,7 @@ export const getCoupons = async (req: AdminAuthRequest, res: Response): Promise<
 export const getCouponById = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     // Check if user is admin
-    if (!req.admin || req.admin.role !== 'admin') {
+    if (!req.admin || req.admin.role !== 'superadmin') {
       return res.status(403).json({ message: 'Access denied. Admin rights required.' });
     }
     const { id } = req.params;
@@ -152,7 +152,7 @@ export const getCouponById = async (req: AdminAuthRequest, res: Response): Promi
 export const updateCoupon = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     // Check if user is admin
-    if (!req.admin || req.admin.role !== 'admin') {
+    if (!req.admin || req.admin.role !== 'superadmin') {
       return res.status(403).json({ message: 'Access denied. Admin rights required.' });
     }
     
@@ -225,7 +225,7 @@ export const updateCoupon = async (req: AdminAuthRequest, res: Response): Promis
 export const deleteCoupon = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     // Check if user is admin
-    if (!req.admin || req.admin.role !== 'admin') {
+    if (!req.admin || req.admin.role !== 'superadmin') {
       return res.status(403).json({ message: 'Access denied. Admin rights required.' });
     }
     

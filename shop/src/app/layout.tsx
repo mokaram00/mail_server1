@@ -19,7 +19,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Bltnm Store - Premium Tools & Accessories',
-  description: 'E-commerce store for premium tools and accessories'
+  description: 'E-commerce store for premium tools and accessories',
+   other: {
+    'base:app_id': '6949a4e8c63ad876c9080f47',
+  },
 }
 
 export default async function RootLayout({

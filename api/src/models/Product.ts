@@ -49,7 +49,8 @@ const ProductSchema = new Schema<IProduct>({
   },
   selectedEmails: [{
     type: String
-  }]
+  }],
+
 }, {
   timestamps: true
 });

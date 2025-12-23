@@ -1,31 +1,38 @@
 import { Request, Response } from 'express';
+import Product, { IProduct } from '../models/Product';
 import Order, { IOrderItem } from '../models/Order';
-import Product from '../models/Product';
 import { User } from '../models/User';
 import { sendPurchaseEmails } from '../utils/purchaseEmails.js';
-import { IProduct } from '../models/Product';
 import fetch from 'node-fetch';
 
-// Extend the Request type to include user property and body
+// Extend the AuthRequest interface to include typed body
 interface AuthRequest extends Request {
   user?: {
     id: string;
   };
-  body: {
-    items: any[];
-    paymentMethod: string;
-    email?: string;
-    ip?: string;
-    countryCode?: string;
+  admin?: {
+    id: string;
+    role: string;
   };
 }
 
+interface CheckoutRequestBody {
+  items: any[];
+  paymentMethod: string;
+  email?: string;
+  ip?: string;
+  countryCode?: string;
+  payCurrency?: string;
+}
+
 // Create checkout
-export const createCheckout = async (req: AuthRequest, res: Response): Promise<Response> => {
+export const createCheckout = async (req: AuthRequest & {body: CheckoutRequestBody}, res: Response): Promise<Response> => {
   try {
     console.log('Checkout request received:', req.body);
-    const { items, paymentMethod, email, ip, countryCode } = req.body;
-
+    const { items, paymentMethod, email, payCurrency } = req.body;
+    
+    // ... existing code for authentication and validation ...
+    
     if (!req.user) {
       console.log('Unauthorized checkout attempt');
       return res.status(401).json({ message: 'Unauthorized' });
@@ -42,8 +49,10 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
 
     // Validate items format
     for (const item of items) {
-      if (!item.productId || typeof item.quantity !== 'number' || item.quantity <= 0) {
-        console.log('Invalid item format:', item);
+      // Handle both formats: {productId, quantity} and {_id, quantity}
+      const productId = item.productId || item._id;
+      if (!productId || typeof item.quantity !== 'number' || item.quantity <= 0) {
+        console.warn(`[${new Date().toISOString()}] Invalid item format in cart for user ${req.user.id}`, item);
         return res.status(400).json({ message: 'Invalid item format in cart' });
       }
     }
@@ -52,24 +61,26 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
     let totalAmount = 0;
     const orderItems = [];
     
-    // Fetch product details and calculate total
-    const productIds = items.map((item: any) => item.productId);
-    console.log('Product IDs to fetch:', productIds);
+    // Find products in database
+    const productIds = items.map((item: any) => item.productId || item._id);
     const products: IProduct[] = await Product.find({ '_id': { $in: productIds } });
-    console.log('Products found:', products.length);
+    
+    console.log(`[${new Date().toISOString()}] Found ${products.length} products for checkout for user ${req.user.id}`);
     
     // Store product prices for verification later
     const productPrices: Record<string, number> = {};
     
     for (const item of items) {
-      const product = products.find(p => (p as any)._id.toString() === item.productId);
+      // Handle both formats: {productId, quantity} and {_id, quantity}
+      const productId = item.productId || item._id;
+      const product = products.find(p => (p as any)._id.toString() === productId);
       if (!product) {
-        console.log('Product not found:', item.productId);
-        return res.status(400).json({ message: `Product with ID ${item.productId} not found` });
+        console.warn(`[${new Date().toISOString()}] Product with ID ${productId} not found for user ${req.user.id}`);
+        return res.status(400).json({ message: `Product with ID ${productId} not found` });
       }
       
       // Store product price for verification
-      productPrices[item.productId] = product.price;
+      productPrices[productId] = product.price;
       
       // Note: We don't check stock here anymore, will be checked after payment confirmation
       const itemTotal = product.price * item.quantity;
@@ -85,72 +96,77 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
     console.log('Total amount calculated:', totalAmount);
     console.log('Order items:', orderItems);
 
-    // If payment method is SellAuth, create checkout session with SellAuth API
-    if (paymentMethod === 'sellauth') {
+    // If payment method is Polar, create checkout session with Polar API
+    if (paymentMethod === 'polar') {
       try {
-        console.log('Creating SellAuth checkout session');
-        console.log('SELLAUTH_SHOP_ID:', process.env.SELLAUTH_SHOP_ID);
-        console.log('SELLAUTH_API_KEY exists:', !!process.env.SELLAUTH_API_KEY);
+        console.log('Creating Polar checkout session');
+        console.log('POLAR_API_KEY exists:', !!process.env.POLAR_API_KEY);
         
-        const sellAuthResponse = await fetch(`https://api.sellauth.com/v1/shops/${process.env.SELLAUTH_SHOP_ID}/checkout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.SELLAUTH_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            cart: items.map((item: any) => ({
-              product_id: item.productId,
-              quantity: item.quantity,
-            })),
-            ip: ip || req.ip || '127.0.0.1',
-            country_code: countryCode || 'US',
-            email: email || (await User.findById(req.user.id))?.email,
-            payment_gateways: {
-              STRIPE: true,
-              PAYPAL: true,
-            }
-          }),
-        });
-
-        console.log('SellAuth response status:', sellAuthResponse.status);
-        const sellAuthData = await sellAuthResponse.json();
-        console.log('SellAuth response data:', sellAuthData);
-
-        if (!sellAuthResponse.ok) {
-          console.log('SellAuth API error:', sellAuthData);
-          return res.status(sellAuthResponse.status).json({
-            message: 'Failed to create checkout session with SellAuth',
-            error: sellAuthData
-          });
+        // Get user email
+        const user = await User.findById(req.user.id);
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
         }
 
-        // Create order with pending status and store SellAuth invoice ID
+        // Create order first to get order ID
         const order = new Order({
           user: req.user.id,
           items: orderItems,
           totalAmount,
           paymentMethod,
           paymentStatus: 'pending', // Payment is pending until confirmed by webhook
-          status: 'pending',
-          sellAuthInvoiceId: sellAuthData.invoice_id,
-          sellAuthCheckoutUrl: sellAuthData.url
+          status: 'pending'
         });
         
         await order.save();
         console.log('Order created:', order._id);
 
+        // Create payment with Polar
+        const polarResponse = await fetch('https://api.polar.sh/v1/checkouts/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.POLAR_API_KEY || ''}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            product_id: orderItems[0].product.toString(), // Using first product for checkout
+            success_url: `${process.env.SHOP_URL}/shop/checkout/success?order_id=${order._id}`,
+            customer_email: email || user.email,
+            price_amount: Math.round(totalAmount * 100), // Convert to cents
+            price_currency: 'usd',
+          }),
+        });
+
+        console.log('Polar response status:', polarResponse.status);
+        const polarData = await polarResponse.json();
+        console.log('Polar response data:', polarData);
+
+        if (!polarResponse.ok) {
+          console.log('Polar API error:', polarData);
+          // Delete the order since payment creation failed
+          await Order.findByIdAndDelete(order._id);
+          return res.status(polarResponse.status).json({
+            message: 'Failed to create checkout session with Polar',
+            error: polarData
+          });
+        }
+
+        // Update order with Polar checkout ID and checkout URL
+        order.polarCheckoutId = polarData.id;
+        order.polarCheckoutUrl = polarData.url;
+        await order.save();
+
         // Return the checkout URL to redirect the user
         return res.status(200).json({
           message: 'Checkout session created successfully',
-          checkoutUrl: sellAuthData.url,
-          invoiceId: sellAuthData.invoice_id
+          checkoutUrl: polarData.url,
+          orderId: order._id
         });
-      } catch (sellAuthError: any) {
-        console.error('SellAuth checkout error:', sellAuthError);
+      } catch (polarError: any) {
+        console.error('Polar checkout error:', polarError);
         return res.status(500).json({ 
-          message: 'Failed to create checkout session with SellAuth',
-          error: sellAuthError.message || 'Unknown error'
+          message: 'Failed to create checkout session with Polar',
+          error: polarError.message || 'Unknown error'
         });
       }
     } else {
@@ -195,111 +211,31 @@ export const createCheckout = async (req: AuthRequest, res: Response): Promise<R
   }
 };
 
-// Webhook endpoint for SellAuth notifications
-export const sellAuthWebhook = async (req: Request, res: Response): Promise<Response> => {
+
+
+// Get available payment methods
+export const getAvailableCurrencies = async (req: Request, res: Response): Promise<Response> => {
   try {
-    // Verify webhook signature if needed (you might want to add this for security)
-    // const signature = req.headers['x-sellauth-signature'];
-    // if (!verifyWebhookSignature(req.body, signature)) {
-    //   return res.status(401).json({ message: 'Invalid webhook signature' });
-    // }
+    // Return available payment methods for Polar
+    const currencies = [
+      { code: 'usd', name: 'US Dollar' },
+      { code: 'eur', name: 'Euro' },
+      { code: 'gbp', name: 'British Pound' },
+      { code: 'btc', name: 'Bitcoin' },
+      { code: 'eth', name: 'Ethereum' },
+      { code: 'usdc', name: 'USD Coin' }
+    ];
 
-    const { invoice_id, status, total_amount, items } = req.body;
-
-    // Find order by SellAuth invoice ID
-    const order = await Order.findOne({ sellAuthInvoiceId: invoice_id });
-    
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found for this invoice' });
-    }
-
-    // Verify the total amount matches
-    if (Math.abs(total_amount - order.totalAmount) > 0.01) { // Allow small floating point differences
-      console.warn(`Amount mismatch for order ${order._id}: expected ${order.totalAmount}, got ${total_amount}`);
-      // You might want to flag this order for manual review instead of rejecting it outright
-    }
-
-    // Verify individual items and quantities
-    if (items && Array.isArray(items)) {
-      // Create a map of order items for easier lookup
-      const orderItemMap = new Map();
-      for (const item of order.items) {
-        orderItemMap.set((item.product as any).toString(), item);
-      }
-      
-      // Verify each item in the webhook
-      for (const item of items) {
-        const orderItem = orderItemMap.get(item.product_id);
-        if (!orderItem) {
-          console.warn(`Item ${item.product_id} not found in order ${order._id}`);
-          continue;
-        }
-        
-        if (orderItem.quantity !== item.quantity) {
-          console.warn(`Quantity mismatch for product ${item.product_id} in order ${order._id}: expected ${orderItem.quantity}, got ${item.quantity}`);
-        }
-        
-        const expectedPrice = orderItem.price * orderItem.quantity;
-        const actualPrice = item.price * item.quantity;
-        if (Math.abs(expectedPrice - actualPrice) > 0.01) {
-          console.warn(`Price mismatch for product ${item.product_id} in order ${order._id}: expected ${expectedPrice}, got ${actualPrice}`);
-        }
-      }
-    }
-
-    // Update order status based on SellAuth status
-    if (status === 'paid') {
-      order.paymentStatus = 'paid';
-      order.status = 'processing';
-      
-      // Save the updated order
-      await order.save();
-      
-      // Now deduct stock from products
-      for (const item of order.items) {
-        const product = await Product.findById(item.product);
-        if (product) {
-          // Check if there's enough stock
-          if (product.stock >= item.quantity) {
-            product.stock -= item.quantity;
-            await product.save();
-          } else {
-            // Not enough stock - log this issue
-            console.error(`Not enough stock for product ${product._id} when fulfilling order ${order._id}`);
-            // You might want to notify admin or handle this case differently
-          }
-        }
-      }
-      
-      // Send purchase emails
-      try {
-        const user = await User.findById(order.user);
-        if (user) {
-          // Populate order with product details for email
-          await order.populate('items.product');
-          // Get products for email
-          const products = await Product.find({ '_id': { $in: order.items.map((item: IOrderItem) => item.product) } });
-          await sendPurchaseEmails(user, order, products);
-        }
-      } catch (emailError: any) {
-        console.error('Failed to send purchase emails:', emailError);
-        // Don't fail the webhook if emails fail to send
-      }
-      
-      return res.status(200).json({ message: 'Order updated successfully' });
-    } else if (status === 'failed') {
-      order.paymentStatus = 'failed';
-      order.status = 'cancelled';
-      await order.save();
-      
-      return res.status(200).json({ message: 'Order marked as failed' });
-    } else {
-      // Handle other statuses if needed
-      return res.status(200).json({ message: 'Webhook received, no action taken for this status' });
-    }
+    return res.status(200).json({
+      message: 'Available payment methods fetched successfully',
+      currencies: currencies
+    });
   } catch (error: any) {
-    console.error('SellAuth webhook error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error('Error fetching payment methods:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error',
+      error: error.message 
+    });
   }
 };
 

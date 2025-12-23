@@ -5,7 +5,7 @@ import { useCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { FaShoppingCart, FaWrench, FaCheckCircle,FaTrash } from 'react-icons/fa';
+import { FaShoppingCart, FaWrench, FaCheckCircle, FaTrash } from 'react-icons/fa';
 import SubdomainLink from '@/components/SubdomainLink';
 import apiClient from '@/lib/apiClient';
 
@@ -17,15 +17,20 @@ export default function CartPage() {
   const [isAuth, setIsAuth] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
-  const selectedPaymentMethod = 'sellauth'; // Changed to use SellAuth by default
+  const [availableCurrencies, setAvailableCurrencies] = useState<any[]>([]);
+  const [selectedCurrency, setSelectedCurrency] = useState('btc'); // Default to BTC
+  
+  // Changed to use Polar by default
+  const selectedPaymentMethod = 'polar';
+  
   const paymentMethods = [
     {
-      id: 'sellauth',
-      name: 'SellAuth Checkout',
-      nameEn: 'SellAuth Checkout',
+      id: 'polar',
+      name: 'Polar Payment',
+      nameEn: 'Polar Payment',
       icon: FaCheckCircle,
       color: 'from-blue-600 to-blue-700',
-      description: 'Secure payment via SellAuth'
+      description: 'Pay with credit card or other methods via Polar'
     }
   ];
 
@@ -53,6 +58,48 @@ export default function CartPage() {
     checkAuth();
   }, []);
 
+  // Fetch available currencies
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        console.log('Fetching available currencies...');
+        const response = await apiClient.getAvailableCurrencies();
+        console.log('Currencies response:', response);
+        if (response && response.currencies) {
+          // Check if currencies is an array or object
+          let currenciesArray = [];
+          if (Array.isArray(response.currencies)) {
+            currenciesArray = response.currencies;
+          } else if (typeof response.currencies === 'object') {
+            // If it's an object, check if it has a 'currencies' property or convert values
+            if (response.currencies.currencies && Array.isArray(response.currencies.currencies)) {
+              currenciesArray = response.currencies.currencies;
+            } else {
+              // Convert object values to array
+              currenciesArray = Object.values(response.currencies).filter(currency => 
+                currency && typeof currency === 'object'
+              );
+            }
+          }
+          
+          // Filter out invalid currencies
+          const validCurrencies = currenciesArray.filter((currency: any) => 
+            currency && currency.code && typeof currency.code === 'string'
+          );
+          
+          console.log('Setting available currencies:', validCurrencies);
+          setAvailableCurrencies(validCurrencies);
+        } else {
+          console.log('No currencies in response, using defaults');
+        }
+      } catch (error) {
+        console.error('Error fetching currencies:', error);
+      }
+    };
+
+    fetchCurrencies();
+  }, []);
+
   const handleCheckout = async () => {
     if (state.items.length === 0) return;
 
@@ -67,13 +114,17 @@ export default function CartPage() {
       // Call the correct endpoint - /api/checkout/ not /api/checkout/create-checkout-session
       const response = await apiClient.createCheckoutSession({ 
         items: state.items, 
-        paymentMethod: selectedPaymentMethod,
-        email: user.email
+        paymentMethod: selectedPaymentMethod, // Changed to polar
+        email: user.email,
+        payCurrency: selectedCurrency // Pass selected currency
       });
 
       if (response && response.checkoutUrl) {
-        // Redirect to SellAuth checkout page
+        // Redirect to Polar checkout page
         window.location.href = response.checkoutUrl;
+      } else if (response && response.error) {
+        // Handle API errors
+        alert(`Checkout failed: ${response.message || response.error.message || 'Unknown error'}`);
       } else if (response && response.message) {
         // For now, we'll just show a success message
         alert('Checkout created successfully!');
@@ -81,9 +132,9 @@ export default function CartPage() {
         // Handle unexpected response
         alert('Unexpected response from checkout service');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Checkout error:', error);
-      alert('Failed to create checkout. Please try again.');
+      alert(`Failed to create checkout: ${error.message || 'Please try again.'}`);
     } finally {
       setIsCheckingOut(false);
     }
@@ -258,48 +309,113 @@ export default function CartPage() {
           <div className="lg:col-span-1">
             <div className="bg-card rounded-3xl shadow-xl border border-foreground/10 p-6 sticky top-28">
               <h2 className="text-xl font-bold text-foreground mb-6">Order Summary</h2>
-
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between text-base">
-                  <span className="text-foreground/70">Subtotal:</span>
-                  <span className="font-medium">${state.total.toFixed(2)}</span>
-                </div>
-                <div className="border-t border-foreground/10 pt-4">
-                  <div className="flex justify-between text-2xl font-bold">
-                    <span>Total:</span>
-                    <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                      ${state.total.toFixed(2)}
+              
+              {/* Currency Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-foreground/70 mb-2">
+                  Payment Currency
+                </label>
+                <select
+                  value={selectedCurrency}
+                  onChange={(e) => setSelectedCurrency(e.target.value)}
+                  className="w-full bg-background border border-foreground/20 rounded-xl px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {availableCurrencies.length > 0 ? (
+                    availableCurrencies.map((currency: any) => {
+                      // Handle both string format and object format
+                      let currencyCode, currencyName;
+                      
+                      if (typeof currency === 'string') {
+                        // String format: "eth", "btc", etc.
+                        currencyCode = currency;
+                        currencyName = currency.toUpperCase();
+                      } else if (currency && typeof currency === 'object') {
+                        // Object format: {code: "eth", name: "Ethereum"}
+                        currencyCode = currency.code;
+                        currencyName = currency.name || currency.code;
+                      } else {
+                        // Invalid currency format
+                        return null;
+                      }
+                      
+                      // Safety check
+                      if (!currencyCode) {
+                        return null;
+                      }
+                      
+                      return (
+                        <option key={currencyCode} value={currencyCode}>
+                          {currencyName} ({currencyCode.toUpperCase()})
+                        </option>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <option value="btc">Bitcoin (BTC)</option>
+                      <option value="eth">Ethereum (ETH)</option>
+                      <option value="ltc">Litecoin (LTC)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              
+              {/* Items */}
+              <div className="space-y-3 mb-6">
+                {state.items.map((item) => (
+                  <div key={item._id} className="flex justify-between text-sm">
+                    <span className="text-foreground/70">
+                      {item.name} × {item.quantity}
+                    </span>
+                    <span className="font-medium">
+                      ${(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
+                ))}
+              </div>
+              
+              {/* Divider */}
+              <div className="border-t border-foreground/10 my-4"></div>
+              
+              {/* Totals */}
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between">
+                  <span className="text-foreground/70">Subtotal</span>
+                  <span className="font-medium">${state.total.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-foreground/70">Shipping</span>
+                  <span className="font-medium">Free</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total</span>
+                  <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    ${state.total.toFixed(2)} USD
+                  </span>
                 </div>
               </div>
-
-              {/* Payment Methods Section */}
+              
+              {/* Payment Method */}
               <div className="mb-6">
-                <h3 className="text-base font-semibold text-foreground mb-4">Payment Methods</h3>
+                <h3 className="text-lg font-bold text-foreground mb-3">Payment Method</h3>
                 <div className="space-y-3">
                   {paymentMethods.map((method) => {
-                    const Icon = method.icon;
-
+                    const IconComponent = method.icon;
                     return (
-                      <div
+                      <div 
                         key={method.id}
-                        className="flex items-center p-4 rounded-2xl border border-foreground/10 bg-foreground/5"
+                        className={`border-2 border-foreground/20 rounded-2xl p-4 cursor-pointer transition-all duration-300 ${
+                          selectedPaymentMethod === method.id 
+                            ? 'border-primary bg-primary/5' 
+                            : 'hover:border-foreground/30'
+                        }`}
                       >
-                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${method.color} flex items-center justify-center mr-4 rtl:ml-4 rtl:mr-0`}>
-                          <Icon className="w-5 h-5 text-white" />
-                        </div>
-
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-semibold text-foreground text-sm">
-                                {method.name}
-                              </h4>
-                              <p className="text-xs text-foreground/50 mt-1">
-                                {method.description}
-                              </p>
-                            </div>
+                        <div className="flex items-center">
+                          <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${method.color} flex items-center justify-center mr-3`}>
+                            <IconComponent className="text-white text-lg" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-foreground">{method.name}</div>
+                            <div className="text-sm text-foreground/70">{method.description}</div>
                           </div>
                         </div>
                       </div>
@@ -307,88 +423,70 @@ export default function CartPage() {
                   })}
                 </div>
               </div>
-
+              
+              {/* Checkout Button */}
               <button
                 onClick={handleCheckout}
                 disabled={isCheckingOut || state.items.length === 0}
-                className="w-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-4 rounded-2xl text-base font-bold shadow-lg hover:from-primary/90 hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
+                className="w-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-6 py-4 rounded-2xl text-lg font-semibold shadow-lg hover:from-primary/90 hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isCheckingOut ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-3"></div>
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                     Processing...
-                  </>
+                  </span>
                 ) : (
-                  'Proceed to Checkout'
+                  `Proceed to Checkout`
                 )}
               </button>
-
-              <div className="mt-6 text-center">
-                <SubdomainLink
-                  href="/products"
-                  className="text-foreground/70 hover:text-foreground text-sm font-medium transition-colors duration-200"
-                >
-                  Continue Shopping
-                </SubdomainLink>
+              
+              <div className="mt-4 text-center text-sm text-foreground/50">
+                By placing your order, you agree to our{' '}
+                <Link href="/terms" className="text-primary hover:underline">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-primary hover:underline">
+                  Privacy Policy
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Authentication Modal */}
+      
+      {/* Auth Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-card rounded-3xl shadow-2xl border border-foreground/10 max-w-md w-full transform transition-all duration-300 scale-100">
-            <div className="p-8">
-              <div className="text-center mb-8">
-                <div className="mx-auto bg-gradient-to-br from-primary/20 to-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                  <FaShoppingCart className="text-primary text-2xl" />
-                </div>
-                <h3 className="text-2xl font-bold text-foreground mb-3">
-                  Complete Your Purchase
-                </h3>
-                <p className="text-foreground/70 text-base">
-                  Please log in or register to complete your purchase
-                </p>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card rounded-3xl shadow-2xl border border-foreground/10 max-w-md w-full p-8 relative">
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 text-foreground/50 hover:text-foreground transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary/80 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <FaCheckCircle className="text-white text-2xl" />
               </div>
-
-              <div className="space-y-5">
-                <SubdomainLink
-                  href="/login"
-                  className="block w-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-center px-6 py-4 rounded-2xl text-base font-bold shadow-lg hover:from-primary/90 hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
-                  onClick={() => setShowAuthModal(false)}
-                >
-                  Log in
-                </SubdomainLink>
-                
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-foreground/10"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-card px-3 text-foreground/50">OR</span>
-                  </div>
-                </div>
-
-                <SubdomainLink
-                  href="/register"
-                  className="block w-full bg-gradient-to-r from-foreground to-foreground/80 text-foreground-contrast text-center px-6 py-4 rounded-2xl text-base font-bold shadow-lg hover:from-foreground/90 hover:to-foreground focus:outline-none focus:ring-2 focus:ring-foreground focus:ring-offset-2 transition-all duration-300 transform hover:scale-[1.02]"
-                  onClick={() => setShowAuthModal(false)}
-                >
-                  Register New Account
-                </SubdomainLink>
-              </div>
-
-              <div className="mt-8">
-                <button
-                  onClick={() => setShowAuthModal(false)}
-                  className="w-full text-foreground/70 hover:text-foreground text-base font-medium py-3 transition-colors duration-200"
-                >
-                  Continue Shopping
-                </button>
-              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Authentication Required</h3>
+              <p className="text-foreground/70">
+                Please sign in to complete your purchase
+              </p>
             </div>
+            
+            <SubdomainLink 
+              href="/auth/login" 
+              className="block w-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-center px-6 py-3 rounded-2xl font-semibold shadow-lg hover:from-primary/90 hover:to-primary transition-all duration-300"
+            >
+              Sign In
+            </SubdomainLink>
           </div>
         </div>
       )}

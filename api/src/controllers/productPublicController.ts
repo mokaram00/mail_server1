@@ -31,8 +31,8 @@ export const getProducts = async (req: Request, res: Response): Promise<Response
       .skip(skip)
       .limit(limitNumber);
       
-    // Remove selectedEmails field from each product
-    const productsWithoutSelectedEmails = products.map(product => {
+    // Remove selectedEmails fields from each product
+    const productsWithoutSensitiveData = products.map(product => {
       const productObj = product.toObject();
       delete productObj.selectedEmails;
       return productObj;
@@ -42,7 +42,7 @@ export const getProducts = async (req: Request, res: Response): Promise<Response
     const total = await Product.countDocuments(filter);
     
     return res.status(200).json({
-      products: productsWithoutSelectedEmails,
+      products: productsWithoutSensitiveData,
       pagination: {
         currentPage: pageNumber,
         totalPages: Math.ceil(total / limitNumber),
@@ -78,7 +78,7 @@ export const getProductById = async (req: Request, res: Response): Promise<Respo
       return res.status(404).json({ message: 'Product not found' });
     }
     
-    // Remove selectedEmails field from the product before sending response
+    // Remove selectedEmails fields from the product before sending response
     const productObj = product.toObject();
     delete productObj.selectedEmails;
     

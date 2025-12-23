@@ -22,9 +22,12 @@ export interface IOrder extends Document {
     zipCode: string;
     country: string;
   };
-  // SellAuth integration fields
-  sellAuthInvoiceId?: string;
-  sellAuthCheckoutUrl?: string;
+  // Payment provider integration fields
+  nowPaymentsOrderId?: string;
+  nowPaymentsCheckoutUrl?: string;
+  // Polar integration fields
+  polarCheckoutId?: string;
+  polarCheckoutUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,11 +81,18 @@ const OrderSchema = new Schema<IOrder>({
     zipCode: String,
     country: String
   },
-  // SellAuth integration fields
-  sellAuthInvoiceId: {
+  // Payment provider integration fields
+  nowPaymentsOrderId: {
     type: String
   },
-  sellAuthCheckoutUrl: {
+  nowPaymentsCheckoutUrl: {
+    type: String
+  },
+  // Polar integration fields
+  polarCheckoutId: {
+    type: String
+  },
+  polarCheckoutUrl: {
     type: String
   }
 }, {
@@ -94,6 +104,5 @@ OrderSchema.index({ user: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
-OrderSchema.index({ sellAuthInvoiceId: 1 });
 
 export default adminConnection.models.Order || adminConnection.model<IOrder>('Order', OrderSchema);

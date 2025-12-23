@@ -9,8 +9,8 @@ export const uploadImages = async (req: Request, res: Response): Promise<Respons
     
     // Check if user is admin
     const admin = (req as any).admin;
-    if (!admin || admin.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin rights required.' });
+    if (!admin || admin.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Access denied. Superadmin rights required.' });
     }
 
     // Check if files were uploaded

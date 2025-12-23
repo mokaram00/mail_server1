@@ -353,6 +353,19 @@ const apiClient = {
     
     return response.json();
   },
+  
+  // Get available payment methods
+  getAvailableCurrencies: async (): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/api/checkout/currencies`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    return response.json();
+  },
 };
 
 export default apiClient;

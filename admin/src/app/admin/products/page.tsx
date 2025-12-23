@@ -60,7 +60,7 @@ export default function ProductsPage() {
     featured: false,
     images: [],
     productType: 'accounts',
-    selectedEmails: []
+    selectedEmails: [],
   });
   
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -350,35 +350,35 @@ export default function ProductsPage() {
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = 'Product name is required';
-    }
-    
-    if (formData.description.length < 10) {
-      newErrors.description = 'Product description must be at least 10 characters';
-    }
-    
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      newErrors.price = 'Product price must be greater than 0';
-    }
-    
-    if (!formData.stock || parseInt(formData.stock) < 0) {
-      newErrors.stock = 'Product stock must be 0 or greater';
-    }
-    
-    if (formData.productType === 'accounts' && selectedEmails.length === 0) {
-      newErrors.selectedEmails = 'At least one email account must be selected';
-    }
-    
-    // Optional: Add image validation if needed
-    // For example, limit the number of images
-    if (formData.images.length > 10) {
-      newErrors.images = 'You can upload a maximum of 10 images';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  
+  if (!formData.name.trim()) {
+    newErrors.name = 'Product name is required';
+  }
+  
+  if (formData.description.length < 10) {
+    newErrors.description = 'Product description must be at least 10 characters';
+  }
+  
+  if (!formData.price || parseFloat(formData.price) <= 0) {
+    newErrors.price = 'Product price must be greater than 0';
+  }
+  
+  if (!formData.stock || parseInt(formData.stock) < 0) {
+    newErrors.stock = 'Product stock must be 0 or greater';
+  }
+  
+  if (formData.productType === 'accounts' && selectedEmails.length === 0) {
+    newErrors.selectedEmails = 'At least one email account must be selected';
+  }
+  
+  // Optional: Add image validation if needed
+  // For example, limit the number of images
+  if (formData.images.length > 10) {
+    newErrors.images = 'You can upload a maximum of 10 images';
+  }
+  
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -418,7 +418,7 @@ export default function ProductsPage() {
           featured: formData.featured,
           images: allImageUrls, // Use the combined image URLs
           productType: formData.productType,
-          selectedEmails: selectedEmails
+          selectedEmails: selectedEmails,
         };
         
         // Update existing product
@@ -451,7 +451,7 @@ export default function ProductsPage() {
           featured: formData.featured,
           images: [], // No images initially
           productType: formData.productType,
-          selectedEmails: selectedEmails
+          selectedEmails: selectedEmails,
         };
         
         // Create product first to get its ID
@@ -514,7 +514,7 @@ export default function ProductsPage() {
         featured: false,
         images: [],
         productType: 'accounts',
-        selectedEmails: []
+        selectedEmails: [],
       });
       setSelectedEmails([]);
       setSelectAllEmails(false);
@@ -565,7 +565,7 @@ export default function ProductsPage() {
       featured: product.featured,
       images: product.images || [],
       productType: product.productType,
-      selectedEmails: product.selectedEmails || []
+      selectedEmails: product.selectedEmails || [],
     });
     
     // Set editing product ID
@@ -633,7 +633,7 @@ export default function ProductsPage() {
               featured: false,
               images: [],
               productType: 'accounts',
-              selectedEmails: []
+              selectedEmails: [],
             });
             setSelectedEmails([]);
             setSelectAllEmails(false);

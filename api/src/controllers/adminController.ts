@@ -11,7 +11,7 @@ import { User } from '../models/User';
 import { sendPurchaseEmails } from '../utils/purchaseEmails.js';
 import { IProduct } from '../models/Product';
 
-// Extend the Request type to include admin property
+// Extend the AdminAuthRequest type to include admin property
 interface AdminAuthRequest extends Request {
   admin?: {
     id: string;
@@ -54,7 +54,7 @@ export const getUsers = async (req: AdminAuthRequest, res: Response): Promise<Re
   }
 };
 
-export const getUserById = async (req: Request, res: Response): Promise<Response> => {
+export const getUserById = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
 
@@ -155,7 +155,7 @@ export const updateUserRole = async (req: AdminAuthRequest, res: Response): Prom
 };
 
 // Update user classification
-export const updateUserClassification = async (req: Request, res: Response): Promise<Response> => {
+export const updateUserClassification = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
     const { classification } = req.body;
@@ -297,12 +297,10 @@ export const getSystemStats = async (req: AdminAuthRequest, res: Response): Prom
 };
 
 // Create a new user
-export const createUser = async (req: Request, res: Response): Promise<Response> => {
+export const createUser = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     const { username, password, domain, isDefaultDomain, accountClassification } = req.body;
-    
-    console.log('Create user request body:', req.body);
-    
+        
     // Validate required fields
     if (!username || !password) {
       console.log('Validation failed: username and password are required');
@@ -405,10 +403,15 @@ export const createUser = async (req: Request, res: Response): Promise<Response>
 };
 
 // Bulk create emails
-export const bulkCreateUsers = async (req: Request, res: Response): Promise<Response> => {
+export const bulkCreateUsers = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     const { emails } = req.body;
     console.log(`Bulk creating ${emails.length} emails`);
+
+        // Check if user is superadmin
+    if (req.admin?.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Access denied. Superadmin rights required.' });
+    }
 
     // Validate input
     if (!Array.isArray(emails) || emails.length === 0) {
@@ -545,10 +548,13 @@ export const bulkCreateUsers = async (req: Request, res: Response): Promise<Resp
 // Create a new admin
 export const createAdmin = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
+        // Check if user is superadmin
+    if (req.admin?.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Access denied. Superadmin rights required.' });
+    }
+
     const { username, email, password, role } = req.body;
-    
-    console.log('Create admin request body:', req.body);
-    
+
     // Validate required fields
     if (!username || !email || !password) {
       console.log('Validation failed: username, email, and password are required');
@@ -705,7 +711,7 @@ export const getServerInfo = async (req: AdminAuthRequest, res: Response): Promi
 
 
 // Get all domains
-export const getDomains = async (req: Request, res: Response): Promise<Response> => {
+export const getDomains = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     console.log('Fetching all domains');
     // Get all domains from the Domain collection
@@ -730,7 +736,7 @@ export const getDomains = async (req: Request, res: Response): Promise<Response>
 };
 
 // Add a new domain
-export const addDomain = async (req: Request, res: Response): Promise<Response> => {
+export const addDomain = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     const { domain } = req.body;
     console.log(`Received request to add domain: ${domain}`);
@@ -773,7 +779,7 @@ export const addDomain = async (req: Request, res: Response): Promise<Response> 
 };
 
 // Get all account classifications
-export const getAccountClassifications = async (req: Request, res: Response): Promise<Response> => {
+export const getAccountClassifications = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     console.log('Fetching all account classifications');
     // Get all categories from the Category collection
@@ -793,7 +799,7 @@ export const getAccountClassifications = async (req: Request, res: Response): Pr
 };
 
 // Add a new account classification
-export const addAccountClassification = async (req: Request, res: Response): Promise<Response> => {
+export const addAccountClassification = async (req: AdminAuthRequest, res: Response): Promise<Response> => {
   try {
     const { classification } = req.body;
     console.log(`Received request to add classification: ${classification}`);
